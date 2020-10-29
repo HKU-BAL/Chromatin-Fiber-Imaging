@@ -77,8 +77,8 @@ python SMLMAnalyzer.py --DATA_PATH SMLM.csv --SECOND_PER_FRAME 0.0017 --NM_PER_P
 
 ## Output
 
-* localized single-mocule data of the identified fiber
-* Statistics file, including: x,y,z sizes, average photon count, average localization precision, etc.
+* .csv: localized single-mocule data of the identified fiber
+* \._stat.csv: statistics of the identified fibers, including  x,y,z sizes, average photon count, average localization precision, etc.
 * \._big_xy.png: XY projection of a 100px\*100px region around the identified fiber.
 * \._xy.png: XY projection of the identified fiber.
 * \._xz.png: XZ projection of the identified fiber.
