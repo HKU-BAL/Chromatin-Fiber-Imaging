@@ -42,7 +42,7 @@ Here, we re-implemented the "average shifted histogram" for image rendering, whi
 | LATERAL_SHIFT |The lateral shift of the X and Y-axis. |
 | FRAME_RANGE | Split the input CSV data into multiple frame intervals. | 
 
-### size estimation
+### Size estimation
 
 The length of the Z-axis of a molecular cluster was estimated based on the number of Z slices. And the X, Y dimensions of the molecular clusters were estimated based on the full width at half maximum (FWHM).
 
@@ -56,9 +56,13 @@ The length of the Z-axis of a molecular cluster was estimated based on the numbe
 | Z_MAX | Maximum Z length for the target fiber |
 | Z_SLICE | The length of slices on Z-axis | 
 
-###  
-
-
+### Filtering
+This is an optional setting. It enables users to screen unnecessary data. For now, we provide 3 filtering options: 
+| Paramter | Description |
+| --- | --- |
+|MAX_GRAY_RM_THRESHOLD|The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.|
+| LOC_PREC_THRESHOLD | The localized single-molecules with X or Y fitting errors bigger than this parameter will be discarded. |
+|Valid region (X1,X2,Y1,Y2,Z1,Z2) | Minimum and maximum coordinates of the valid region on X,Y,Z axis |
 
 ### Example
 
@@ -70,5 +74,14 @@ python SMLMAnalyzer.py --DATA_PATH SMLM.csv --SECOND_PER_FRAME 0.0017 --NM_PER_P
 
 ```
 
+
+## Output
+
+* localized single-mocule data of the identified fiber
+* Statistics file, including: x,y,z sizes, average photon count, average localization precision, etc.
+* \._big_xy.png: XY projection of a 100px\*100px region around the identified fiber.
+* \._xy.png: XY projection of the identified fiber.
+* \._xz.png: XZ projection of the identified fiber.
+* \._yz.png: YZ projection of the identified fiber.
 
 
