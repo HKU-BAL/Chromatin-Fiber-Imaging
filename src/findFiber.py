@@ -2,11 +2,9 @@ import pandas as pd
 from seg import cluster_by_connectedComponents,extractComponents
 import numpy as np
 from lmfit import Model as lmModel
-from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
 import math
 import os
-from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel
 
 
