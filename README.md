@@ -72,7 +72,7 @@ This is an optional setting. It enables users to screen unnecessary data. For no
 
 python SMLMAnalyzer.py --DATA_PATH SMLM.csv --SECOND_PER_FRAME 0.0017 --NM_PER_PIXEL 10 --MAGNIFICATION 10.6 --SAVE_PATH save_dir/ --X_MIN 20 --X_MAX 45 --Y_MIN 20 --Y_MAX 45 --Z_MIN 100 --FRAME_RANGE 250
 
-```
+````
 
 
 ## Output
