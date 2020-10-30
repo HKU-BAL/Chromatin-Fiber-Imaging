@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import math
 import os
 from lmfit.models import GaussianModel
-
+import logging
 
 
 class DataProcessor(object):
@@ -359,6 +359,8 @@ class FindFiber(object):
         
         for index in range(len(self.myDataManager.data_list)):
             
+
+            logging.info("process the %d frame interval" %(index)) 
             csvData = self.myDataManager.data_list[index] 
             curImg,curZDict = self.myDataLoader.loadImage(csvData)
             
@@ -551,16 +553,16 @@ class FindFiber(object):
         found_valid_flag = False
         #print('new_img.shape',new_img.shape) 
         rm_coors = np.argwhere((curClusterImg<=gray_threshold)&(curClusterImg>0))
-        #print("rm_coors",rm_coors)
+       
 
-        if(len(rm_coors[0])==0):
+        if(len(rm_coors)==0):
             return []
         #print("rm_coors",rm_coors)    
         for k in range(rm_coors.shape[0]):
             # remove the point
             x = rm_coors[k][0]
             y = rm_coors[k][1]
-            print('x',x,'y',y,'curClusterImg',curClusterImg[x][y])
+            #print('x',x,'y',y,'curClusterImg',curClusterImg[x][y])
             new_img[x][y] = 0
 
             if(not found_valid_flag):
@@ -663,10 +665,10 @@ class FindFiber(object):
         
         num_labels, labels = cluster_by_connectedComponents(curImg,self.connectedFlag,False)
         
-        print('extractComponents...')
+        logging.info('extractComponents...')
         all_pts = extractComponents(curImg,num_labels,labels,curZDict)
          
-        print('num_labels',num_labels) 
+        logging.info('Number of clusters',num_labels) 
         find_coordinates = {}
         count = 0
         
@@ -691,7 +693,7 @@ class FindFiber(object):
             if(tmp_coors in find_coordinates):
                 continue 
           
-             
+            logging.info("current region %s" %(tmp_coors)) 
             # check the max gray value of the cluster 
             cur_max_gray = self.myModel.calMaxGrayVal(cur_img,bbox)            
             
@@ -714,12 +716,13 @@ class FindFiber(object):
             # we extract the maximum continue Z 
             if(flag==1):
                 
-                
+                       
                 x_info,clipFlagX = self.calLength(bbox,cur_img,'x') 
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
                 
                 if((x_info['whole_FWHM'] >= self.minX and y_info['whole_FWHM'] >= self.minY and y_info['whole_FWHM']<=self.maxY and x_info['whole_FWHM'] <= self.maxX) or (x_info['mean_FWHM']>=self.minX and y_info['mean_FWHM'] >= self.minY and x_info['mean_FWHM']<=self.maxX and y_info['mean_FWHM'] <= self.maxY )): 
+                    logging.info("Save the cluster")
                     # extract the found fiber statistics
                     stat_info,clusterData = self.myDataManager.extractData(cur_cluster,csvData)
                     stat_info = self._setInfoToStat(stat_info,x_info,'y')
@@ -739,18 +742,19 @@ class FindFiber(object):
                      
                     pass
                 if(clipFlagX or clipFlagY):
-                   
+                    logging.info("Apply the noise removal module..") 
                     for clip_threshold in range(min(8,int(cur_max_gray/2)),0,-1):
                          
                         clipped_pts = self.clipCluster(cur_img,bbox,cur_cluster,clip_threshold)
                         
                         if(len(clipped_pts)!=0):
-                            
+                             
                             clipped_pts.extend(all_pts)
                             all_pts = clipped_pts
+                         
                     pass
             else:
-              
+                logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)
                 
                 connectedComponents = self.splitContinueZAsConnected(sorted_continue_z_slice_pts,cur_img)             
