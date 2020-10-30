@@ -114,7 +114,7 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average location precision','Y average location precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average location precision','Y average location precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right']
         stat_info = stat_info[cols] 
         stat_info.to_csv(os.path.join(stat_path,str(self.save_index)+'_stat.csv'),index=False)
 
@@ -721,7 +721,10 @@ class FindFiber(object):
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
                 
-                if((x_info['whole_FWHM'] >= self.minX and y_info['whole_FWHM'] >= self.minY and y_info['whole_FWHM']<=self.maxY and x_info['whole_FWHM'] <= self.maxX) or (x_info['mean_FWHM']>=self.minX and y_info['mean_FWHM'] >= self.minY and x_info['mean_FWHM']<=self.maxX and y_info['mean_FWHM'] <= self.maxY )): 
+                ''' 
+                if((x_info['whole_FWHM'] >= self.minX and y_info['whole_FWHM'] >= self.minY and y_info['whole_FWHM']<=self.maxY and x_info['whole_FWHM'] <= self.maxX) or (x_info['mean_FWHM']>=self.minX and y_info['mean_FWHM'] >= self.minY and x_info['mean_FWHM']<=self.maxX and y_info['mean_FWHM'] <= self.maxY ) or (x_info['median_FWHM']>=self.minX and y_info['median_FWHM'] >= self.minY and x_info['median_FWHM']<=self.maxX and y_info['median_FWHM'] <= self.maxY ): 
+                '''
+                if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
                     logging.info("Save the cluster")
                     # extract the found fiber statistics
                     stat_info,clusterData = self.myDataManager.extractData(cur_cluster,csvData)
