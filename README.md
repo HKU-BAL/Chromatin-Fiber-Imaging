@@ -61,7 +61,6 @@ The length of the Z-axis of a molecular cluster was estimated based on the numbe
 | Y_MIN | (required) Minimum Y for the target fiber |
 | Y_MAX | (required) Maximum Y for the target fiber |
 | Z_MIN | (required) Minimum Z length for the target fiber |
-| Z_MAX | (optional) Maximum Z length for the target fiber |
 | Z_SLICE | (required) The length of slices on Z-axis | 
 
 ### Filtering
@@ -70,6 +69,7 @@ This is an optional setting. It enables users to screen unnecessary data. For no
 | --- | --- |
 |MAX_GRAY_RM_THRESHOLD| (required) The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.|
 | LOC_PREC_THRESHOLD | (optional) The localized single-molecules with X or Y fitting errors bigger than this parameter will be discarded. |
+| ERROR_THRESHOLD |(optional) Fitting error tolerence for FWHM calcuation. |
 |Valid region (X1,X2,Y1,Y2,Z1,Z2) | (optional) Minimum and maximum coordinates of the valid region on X,Y,Z axis |
 
 ### Example

@@ -332,7 +332,7 @@ class FindFiber(object):
     Find fibers with the specific conditions
 
     '''
-    def __init__(self,minX,maxX,minY,maxY,minZ,maxZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel):
+    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel):
         # basic settings
        
         self.minX = minX
@@ -340,7 +340,6 @@ class FindFiber(object):
         self.minY = minY
         self.maxY = maxY
         self.minZ = minZ
-        self.maxZ = maxZ
         self.zSlice = zSlice
         self.myDataManager = dataManager
         self.myDataLoader = dataLoader
@@ -721,10 +720,10 @@ class FindFiber(object):
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
                 
-                ''' 
-                if((x_info['whole_FWHM'] >= self.minX and y_info['whole_FWHM'] >= self.minY and y_info['whole_FWHM']<=self.maxY and x_info['whole_FWHM'] <= self.maxX) or (x_info['mean_FWHM']>=self.minX and y_info['mean_FWHM'] >= self.minY and x_info['mean_FWHM']<=self.maxX and y_info['mean_FWHM'] <= self.maxY ) or (x_info['median_FWHM']>=self.minX and y_info['median_FWHM'] >= self.minY and x_info['median_FWHM']<=self.maxX and y_info['median_FWHM'] <= self.maxY ): 
-                '''
+               
                 if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
+                    
+                    
                     logging.info("Save the cluster")
                     # extract the found fiber statistics
                     stat_info,clusterData = self.myDataManager.extractData(cur_cluster,csvData)
@@ -743,7 +742,7 @@ class FindFiber(object):
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
                     find_coordinates[tmp_coors] = True
                      
-                    pass
+                       
                 if(clipFlagX or clipFlagY):
                     logging.info("Apply the noise removal module..") 
                     for clip_threshold in range(min(8,int(cur_max_gray/2)),0,-1):

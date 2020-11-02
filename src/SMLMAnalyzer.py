@@ -30,8 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--Y_MAX',type=float,default=50, help='maximum Y size of the target object')
 
     parser.add_argument('--Z_MIN',type=float,default=100, help="minimum Z size of the target object")
-    parser.add_argument('--Z_MAX',type=float,default=None,help="maximum Z size of the target object")
-
+    
 
     # valid region settings, optional
     parser.add_argument('--X1',type=int,default=None,help="(optional) the left coordinate of the valid region")
@@ -62,7 +61,7 @@ if __name__ == '__main__':
     myDataManager.data_list = myDataProcessor.prepare(DATA_PATH=args.DATA_PATH,splitFrameLen=args.FRAME_RANGE,locPrecThreshold=args.LOC_PREC_THRESHOLD,magnificationRatio=args.MAGNIFICATION)
     
  
-    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,maxZ=args.Z_MAX,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL)
+    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL)
 
     myFiberIdentifier.identifyFiber()
 
