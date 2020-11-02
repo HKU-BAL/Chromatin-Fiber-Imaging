@@ -37,7 +37,7 @@ You may also view the options by:
 ````python
 python SMLMAnalyzer.py --help
 
-```
+````
 
 #### Visualization options
 
