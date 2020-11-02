@@ -41,14 +41,14 @@ if __name__ == '__main__':
     parser.add_argument('--Z1',type=int,default=None,help="(optional) the valid minimum Z coordinate")
     parser.add_argument('--Z2',type=int,default=None,help="(optional) the valid maximum Z coordinate")
 
-    parser.add_argument('--Z_SLICE',type=float,default=20)
-    parser.add_argument('--ERROR_THRESHOLD',type=float,default=20)
+    parser.add_argument('--Z_SLICE',type=float,default=20, help='set the length of slices on z-axis')
+    parser.add_argument('--ERROR_THRESHOLD',type=float,default=6,help='')
    
-    parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8)
-    parser.add_argument('--FRAME_RANGE',type=int,default=None)
-    parser.add_argument('--LOC_PREC_THRESHOLD',type=float,default=100)
-    parser.add_argument('--VIS_METHOD',type=str,default='Average shifted histogram')
-    parser.add_argument('--LATERAL_SHIFT',type=int,default='2')
+    parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8,help='max removal gray value, which is used in noise removal module')
+    parser.add_argument('--FRAME_RANGE',type=int,default=None,help='frame range for each of the frame intervals')
+    parser.add_argument('--LOC_PREC_THRESHOLD',type=float,default=100,help='filtering options for the localization precision')
+    parser.add_argument('--VIS_METHOD',type=str,default='Average shifted histogram',help='visualization method')
+    parser.add_argument('--LATERAL_SHIFT',type=int,default='2',help='lateral shifts')
      
     args = parser.parse_args()
 
