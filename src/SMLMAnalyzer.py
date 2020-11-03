@@ -7,6 +7,8 @@ from findFiber import DataManager,DataProcessor,FindFiber
 from loadData import DataLoader
 
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
 
 if __name__ == '__main__':
 
@@ -58,8 +60,11 @@ if __name__ == '__main__':
     myDataProcessor = DataProcessor()
     myDataLoader = DataLoader(args.VIS_METHOD,lateral_shifted=args.LATERAL_SHIFT,nm_per_pixel=args.NM_PER_PIXEL,validRegion=myValidRegion)
     # prepare csv data
-    myDataManager.data_list = myDataProcessor.prepare(DATA_PATH=args.DATA_PATH,splitFrameLen=args.FRAME_RANGE,locPrecThreshold=args.LOC_PREC_THRESHOLD,magnificationRatio=args.MAGNIFICATION)
+    myDataManager.data_list,dataCheckFlag = myDataProcessor.prepare(DATA_PATH=args.DATA_PATH,splitFrameLen=args.FRAME_RANGE,locPrecThreshold=args.LOC_PREC_THRESHOLD,magnificationRatio=args.MAGNIFICATION)
     
+    if(dataCheckFlag!=1):
+        logging.info("incorrent input!")
+        exit()
  
     myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL)
 

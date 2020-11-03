@@ -27,6 +27,16 @@ class DataProcessor(object):
        
        '''
        srcData = pd.read_csv(DATA_PATH)
+       # check the input data
+       requiredCol = set(["x",'y','z',"Frame Number"])
+       optionalCol = set(["PhotoCount","X Fitting Error","X Fitting Error"])
+       if(not requiredCol.issubset(srcData)):
+           return data_list,0
+       if(not optionalCol.issubset(srcData)):
+           dataCheckFlag = -1
+       else:
+           dataCheckFlag = 1
+
        data_list = []
        #print("prepare locPrecThreshold",locPrecThreshold)
        if(locPrecThreshold!=None):
@@ -49,7 +59,7 @@ class DataProcessor(object):
        else:
                data_list.append(srcData)
         
-       return data_list
+       return data_list,dataCheckFlag
        
     
 
@@ -319,10 +329,18 @@ class Model(object):
 
 
     def calMaxGrayVal(self,img,bbox):
-        
+
+        '''
+     
+
+        return the max and the sum of the gray value of the current image
+
+        '''        
         
         max_gray_val = img.max()
-        return max_gray_val 
+        sum_gray_val = np.sum(img)
+
+        return max_gray_val, sum_gray_val 
     
      
 
@@ -690,15 +708,27 @@ class FindFiber(object):
             
             # bbox 
             bbox = self._bbox(cur_img)
-             
+            
+
+
+            ''' 
             tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2'])
             if(tmp_coors in find_coordinates):
                 continue 
-          
-            logging.info("current region %s" %(tmp_coors)) 
-            # check the max gray value of the cluster 
-            cur_max_gray = self.myModel.calMaxGrayVal(cur_img,bbox)            
             
+            logging.info("current region %s" %(tmp_coors)) 
+            '''
+            # check the max gray value of the cluster 
+            cur_max_gray,cur_sum_gray = self.myModel.calMaxGrayVal(cur_img,bbox)
+
+            # fingerprint of this molecular cluster            
+            tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' + str(cur_sum_gray)
+            if(tmp_coors in find_coordinates):
+                continue
+            find_coordinates[tmp_coors] = True 
+            logging.info("current region %s" %(tmp_coors))
+
+ 
             if(self.minGray and cur_max_gray < self.minGray):
                 continue
   

@@ -24,9 +24,9 @@ The input is SMLM data, which should be in CSV format. Each line represents one 
 | x | The pixel coordinate of the x-axis of the single molecule’s centroid.|
 |y | The pixel coordinate of the y-axis of the single molecule’s centroid. |
 | z | The pixel coordinate of the z-axis of the single molecule’s centroid.|
-| X fitting error | The X fitting error of the localized single-molecules. |
-| Y fitting error | The Y fitting error of the localized single-molecules. |
-| Photon count | Photon count of the single-molecule. |
+| X Fitting Error | The X fitting error of the localized single-molecules. |
+| Y Fitting Error | The Y fitting error of the localized single-molecules. |
+| PhotoCount | Photon count of the single-molecule. |
 | Frame Number | The frame index of the localized single-molecule | 
 
 
