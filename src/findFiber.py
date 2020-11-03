@@ -7,6 +7,7 @@ import math
 import os
 from lmfit.models import GaussianModel
 import logging
+logging.getLogger().setLevel(logging.INFO)
 
 
 class DataProcessor(object):
@@ -679,8 +680,10 @@ class FindFiber(object):
             
 
             count += 1
-            all_pts = all_pts[1:]
-            
+            if(len(all_pts)>1):
+                all_pts = all_pts[1:]
+            else:
+                all_pts = []
              
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
