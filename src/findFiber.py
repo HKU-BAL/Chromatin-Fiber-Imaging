@@ -702,7 +702,9 @@ class FindFiber(object):
                 all_pts = all_pts[1:]
             else:
                 all_pts = []
-             
+            
+            if(len(cur_cluster[0])==0):
+                continue         
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
             
