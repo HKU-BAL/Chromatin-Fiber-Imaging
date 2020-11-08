@@ -517,6 +517,16 @@ class FindFiber(object):
         
         
         clipFlag = False
+        if(max_length==-1):
+            max_length = whole_FWHM
+        
+        '''
+        if(axis=='x'):
+            print('max_length',max_length,'self.minX',self.minX,'whole_FWHM',whole_FWHM)
+        else:
+            print('max_length',max_length,'self.minY',self.minY,'whole_FWHM',whole_FWHM)
+        '''
+
         if(axis=='x' and max_length>self.minX):
             clipFlag = True
         elif(axis=='y' and max_length>self.minY):
@@ -777,7 +787,7 @@ class FindFiber(object):
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
                     find_coordinates[tmp_coors] = True
                      
-                       
+                print("clipFlagX",clipFlagX,"clipFlagY",clipFlagY)                   
                 if(clipFlagX or clipFlagY):
                     logging.info("Apply the noise removal module..") 
                     for clip_threshold in range(min(8,int(cur_max_gray/2)),0,-1):
