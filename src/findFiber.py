@@ -180,7 +180,7 @@ class DataManager(object):
              index.append(tmpData.index[0])
 
         
-        newData = csvData.iloc[index]
+        newData = csvData.loc[index]
 
         min_frame = min(newData["Frame Number"])
         max_frame = max(newData["Frame Number"])
