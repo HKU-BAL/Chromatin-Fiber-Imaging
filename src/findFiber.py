@@ -2,7 +2,11 @@ import pandas as pd
 from seg import cluster_by_connectedComponents,extractComponents
 import numpy as np
 from lmfit import Model as lmModel
-from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use("agg")
+#from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+
 import math
 import os
 from lmfit.models import GaussianModel
@@ -68,7 +72,7 @@ class DataManager(object):
 
     #save_index= 0
     #data_list = []
-    def __init__(self,SAVE_ROOT,second_per_frame):
+    def __init__(self,SAVE_ROOT,second_per_frame,contour_pts=False):
         self.save_index = 0
         self.data_list = []
         self.save_root = SAVE_ROOT
@@ -77,6 +81,7 @@ class DataManager(object):
         self.second_per_frame = second_per_frame
         
         self.batch_num = 0
+        self.contour_pts = contour_pts
         
         
     def saveData(self,stat_info,csvData,imgs,splitFrameBatch):
@@ -105,6 +110,14 @@ class DataManager(object):
         yz_path = os.path.join(cur_batch_dir,'yz')
         big_xy_path = os.path.join(cur_batch_dir,'big_xy')
         original_data_path = os.path.join(cur_batch_dir,'source_csv')
+        # add a z slice column in source_csv
+
+        # select points with minimun/maximum x/y in each of the z slice
+         
+        #selected_points_path = os.path.join(cur_batch_dir,"contour_pts")
+
+
+
 
         if(not os.path.exists(cur_batch_dir)):
             os.mkdir(cur_batch_dir)
@@ -125,7 +138,7 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average location precision','Y average location precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right']
         stat_info = stat_info[cols] 
         stat_info.to_csv(os.path.join(stat_path,str(self.save_index)+'_stat.csv'),index=False)
 
@@ -150,8 +163,37 @@ class DataManager(object):
 
         self.save_index += 1 
         plt.close('all')    
+    
+
+    def extractCsvFromZSlicePts(self,z_slice_pts,csvData):
+
         
-    def extractData(self,pts,csvData):
+        '''
+        '''
+        index = []
+        z_slice_record = []
+        print("extractCsvFromZSlicePts z_slice_pts:",z_slice_pts)
+        for slice_index in range(len(z_slice_pts)):
+            if(z_slice_pts[slice_index]==None):
+                continue
+            for i in range(len(z_slice_pts[slice_index][0])):
+                _x = z_slice_pts[slice_index][0][i]
+                _y = z_slice_pts[slice_index][1][i]
+                _z = z_slice_pts[slice_index][2][i]
+                f1 = csvData['X_magnificated'] == _x
+                f2 = csvData['Y_magnificated'] == _y
+                f3 = csvData['Z_normalized'] ==  _z
+             
+                tmpData = csvData[f1&f2&f3] 
+                index.append(tmpData.index[0])
+                z_slice_record.append(slice_index)
+         
+        newData = csvData.loc[index]
+        newData['z slice index'] = z_slice_record
+        return newData
+
+    
+    def extractData(self,pts,csvData,sliceData=False):
 
         '''
         extract the data from the csv data
@@ -161,11 +203,21 @@ class DataManager(object):
         return cluster statistics and cluster original csv data
 
         '''
-        index = []
+        #index = []
         
-         
+        ''' 
+        print('(len(pts[0])',len(pts[0]))
+        print('(len(pts[1])',len(pts[1])) 
+        print('(len(pts[2])',len(pts[2]))
+        '''
+
+        newData = self.extractCsvFromZSlicePts(pts,csvData)
+
+        '''
+        # extract CSV data
         for i in range(len(pts[0])):
-            
+             #print("extractData i",i)
+                     
              _x = pts[0][i]
              _y = pts[1][i]
              _z = pts[2][i]
@@ -176,12 +228,13 @@ class DataManager(object):
              
             
              tmpData = csvData[f1&f2&f3]
-             #print(tmpData.shape)
+             #print('tmpData',tmpData)
              index.append(tmpData.index[0])
 
-        
+         
         newData = csvData.loc[index]
-
+        '''
+        #print('newData',newData)
         min_frame = min(newData["Frame Number"])
         max_frame = max(newData["Frame Number"])
         # life time of this found fiber
@@ -193,8 +246,8 @@ class DataManager(object):
         loc_prec = [x_location_precision,y_location_precision]
         frame_length = newData["Frame Number"].max() - newData["Frame Number"].min() + 1
         max_frame_gap = self.calMaxFrameGap(newData["Frame Number"].values)
-        stat_info = {"X average location precision":[x_location_precision],\
-                     "Y average location precision":[y_location_precision],\
+        stat_info = {"X average localization precision":[x_location_precision],\
+                     "Y average localization precision":[y_location_precision],\
                      "Life time":[life_time],\
                      "avg_photon_num":[avg_photon_num],\
                      "Max frame gap":[max_frame_gap],\
@@ -351,7 +404,7 @@ class FindFiber(object):
     Find fibers with the specific conditions
 
     '''
-    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel):
+    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray):
         # basic settings
        
         self.minX = minX
@@ -367,6 +420,7 @@ class FindFiber(object):
         self.myModel = Model()
         self.ERROR_THRESHOLD = error_threshold 
         self.nm_per_pixel = nm_per_pixel
+        self.max_removel_gray = max_removel_gray
     def identifyFiber(self):
 
         '''
@@ -374,12 +428,16 @@ class FindFiber(object):
         no return, save the identified data by using data manager to the save path
  
         '''
-        
+
+        logging.info("total %d frame intervals"%(len(self.myDataManager.data_list)))
+        print(self.myDataManager.data_list) 
         for index in range(len(self.myDataManager.data_list)):
             
 
             logging.info("process the %d frame interval" %(index)) 
-            csvData = self.myDataManager.data_list[index] 
+             
+            csvData = self.myDataManager.data_list[index]
+            
             curImg,curZDict = self.myDataLoader.loadImage(csvData)
             
             self.processOneBatch(csvData,curImg,curZDict,index)
@@ -515,18 +573,9 @@ class FindFiber(object):
         
         whole_FWHM, whole_err  = self.myModel.calFWHM(allBoxes[-1],img,axis,self.nm_per_pixel)
         
-        
-        clipFlag = False
         if(max_length==-1):
-            max_length = whole_FWHM
-        
-        '''
-        if(axis=='x'):
-            print('max_length',max_length,'self.minX',self.minX,'whole_FWHM',whole_FWHM)
-        else:
-            print('max_length',max_length,'self.minY',self.minY,'whole_FWHM',whole_FWHM)
-        '''
-
+            max_length = whole_FWHM    
+        clipFlag = False
         if(axis=='x' and max_length>self.minX):
             clipFlag = True
         elif(axis=='y' and max_length>self.minY):
@@ -690,7 +739,7 @@ class FindFiber(object):
         Identify the fiber for one batch data
         curZDict: {(x,y):[z list]}
         '''
-        
+        logging.info("Clustering by 8 connectivity..")    
         num_labels, labels = cluster_by_connectedComponents(curImg,self.connectedFlag,False)
         
         logging.info('extractComponents...')
@@ -706,15 +755,16 @@ class FindFiber(object):
             # cur_cluster only record the center points    
             cur_cluster = all_pts[0]
             
+        
 
             count += 1
             if(len(all_pts)>1):
                 all_pts = all_pts[1:]
             else:
                 all_pts = []
-            
             if(len(cur_cluster[0])==0):
-                continue         
+                continue
+            #print("cur_cluster",cur_cluster) 
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
             
@@ -740,14 +790,14 @@ class FindFiber(object):
             find_coordinates[tmp_coors] = True 
             logging.info("current region %s" %(tmp_coors))
 
- 
+            #print("self.minGray",self.minGray,"cur_max_gray",cur_max_gray) 
             if(self.minGray and cur_max_gray < self.minGray):
                 continue
   
             # check if the cluster has continue Z slice
-           
+            logging.info("start check Z continuous")       
             flag,z_slice_pts,z_slice_ranges = self.checkZContinues(cur_cluster)
-
+            logging.info("check continue Z complete")
             # remove the first and end slices
             pseudo_z_length = (len(z_slice_ranges) - self.myDataLoader.lateral_shifted)* self.zSlice
 
@@ -764,33 +814,37 @@ class FindFiber(object):
                 x_info,clipFlagX = self.calLength(bbox,cur_img,'x') 
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
-                
+                logging.info("X Y dimension calculation complete") 
                
                 if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
                     
                     
                     logging.info("Save the cluster")
                     # extract the found fiber statistics
-                    stat_info,clusterData = self.myDataManager.extractData(cur_cluster,csvData)
+                    #stat_info,clusterData = self.myDataManager.extractData(cur_cluster,csvData)
+                    stat_info,clusterData = self.myDataManager.extractData(z_slice_pts,csvData)
+                    logging.info("extract data complete")
                     stat_info = self._setInfoToStat(stat_info,x_info,'y')
                     stat_info = self._setInfoToStat(stat_info,y_info,'x')
                     stat_info['Z size'] =[ pseudo_z_length]
-                    stat_info['Z range'] = ['(' + str(z_slice_ranges[0][0] ) + ',' + str(z_slice_ranges[-1][1]) + ')']
+                    stat_info['Z range'] = ['[' + str(z_slice_ranges[0][0] ) + ',' + str(z_slice_ranges[-1][1]) + ']']
                     #bbox
-                    stat_info['upper left'] = ['('+str(bbox['x1'])+','+str(bbox['y1'])+')']
-                    stat_info['lower right'] = ['('+str(bbox['x2'])+','+str(bbox['y2'])+')']
+                    stat_info['upper left'] = ['['+str(bbox['x1'])+','+str(bbox['y1'])+']']
+                    stat_info['lower right'] = ['['+str(bbox['x2'])+','+str(bbox['y2'])+']']
                     stat_info['sum of gray value'] = [sum(sum(cur_img))] 
                     
                     
                     # generate visualizations
-                    figureData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img) 
+                    figureData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img)
+                    logging.info("figure rendering complete") 
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
+                    logging.info("saveData complete")
                     find_coordinates[tmp_coors] = True
                      
-                print("clipFlagX",clipFlagX,"clipFlagY",clipFlagY)                   
-                if(clipFlagX or clipFlagY):
+                       
+                if((clipFlagX or clipFlagY)and (self.max_removel_gray!=None)):
                     logging.info("Apply the noise removal module..") 
-                    for clip_threshold in range(min(8,int(cur_max_gray/2)),0,-1):
+                    for clip_threshold in range(min(self.max_removel_gray,int(cur_max_gray/2)),0,-1):
                          
                         clipped_pts = self.clipCluster(cur_img,bbox,cur_cluster,clip_threshold)
                         
@@ -807,7 +861,7 @@ class FindFiber(object):
                 connectedComponents = self.splitContinueZAsConnected(sorted_continue_z_slice_pts,cur_img)             
                 
                 # add the connectedComponents to the front of the queue
-                
+                print("connectedComponents",connectedComponents)        
                 connectedComponents.extend(all_pts)
                 all_pts = connectedComponents
                 pass
@@ -895,28 +949,29 @@ class FindFiber(object):
         return z_continue_flag: Boolean, sorted points by Z slice
         '''
         # whether to ignor too less point here?
-        
+            
         x_array = cur_cluster[0]
         y_array = cur_cluster[1]
         z_array = cur_cluster[2]
  
         sort_z_args = np.argsort(z_array) 
-        
+         
         # get min and max z from the exact z value
 
         # min z of the slice: min z minus shifted value
          
-        min_z = math.floor(z_array[sort_z_args[0]]/self.zSlice)*self.zSlice - self.zSlice*int(self.myDataLoader.lateral_shifted/2) 
+        min_z =  math.floor(z_array[sort_z_args[0]]/self.zSlice)*self.zSlice - self.zSlice*int(self.myDataLoader.lateral_shifted/2) 
         
         max_z = min_z + math.ceil((z_array[sort_z_args[-1]]-min_z)/self.zSlice)*self.zSlice +  self.zSlice*int(self.myDataLoader.lateral_shifted/2)
         if((z_array[sort_z_args[-1]]-min_z)%self.zSlice==0):
             max_z += self.zSlice*int(self.myDataLoader.lateral_shifted/2) 
          
-        z_slice_num = math.ceil((max_z - min_z)/self.zSlice) 
-        
+        z_slice_num = int(math.ceil((max_z - min_z)/self.zSlice) )
+         
         
         # check if every z slice has a valid point 
         existed_flag = np.zeros(z_slice_num)
+        
         start = min_z
         end = min_z + 20
         z_slice_pts = [None]*z_slice_num

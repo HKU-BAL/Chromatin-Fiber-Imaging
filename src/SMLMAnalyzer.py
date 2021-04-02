@@ -43,14 +43,17 @@ if __name__ == '__main__':
     parser.add_argument('--Z2',type=int,default=None,help="(optional) the valid maximum Z coordinate")
 
     parser.add_argument('--Z_SLICE',type=float,default=20, help='set the length of slices on z-axis')
-    parser.add_argument('--ERROR_THRESHOLD',type=float,default=6,help='')
+    parser.add_argument('--ERROR_THRESHOLD',type=float,default=6,help='fitting error threshold for gussian')
    
-    parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8,help='max removal gray value, which is used in noise removal module')
+    parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8,help='(required) The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.')
     parser.add_argument('--FRAME_RANGE',type=int,default=None,help='frame range for each of the frame intervals')
     parser.add_argument('--LOC_PREC_THRESHOLD',type=float,default=100,help='filtering options for the localization precision')
     parser.add_argument('--VIS_METHOD',type=str,default='Average shifted histogram',help='visualization method')
     parser.add_argument('--LATERAL_SHIFT',type=int,default='2',help='lateral shifts')
-     
+    parser.add_argument('--MAX_NOISE_GRAY',type=int,default=8,help='max removal gray value, which is used in noise removal module')    
+
+
+ 
     args = parser.parse_args()
 
 
@@ -66,8 +69,7 @@ if __name__ == '__main__':
         logging.info("incorrent input!")
         exit()
  
-    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL)
-
+    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY)
     myFiberIdentifier.identifyFiber()
 
 
