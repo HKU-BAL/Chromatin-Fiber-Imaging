@@ -63,6 +63,8 @@ The length of the Z-axis of a molecular cluster was estimated based on the numbe
 | Z_MIN | (required) Minimum Z length for the target fiber |
 | Z_SLICE | (required) The length of slices on Z-axis | 
 
+
+
 ### Filtering
 This is an optional setting. It enables users to screen unnecessary data. For now, we provide 3 filtering options: 
 | Paramter | Description |
@@ -71,7 +73,7 @@ This is an optional setting. It enables users to screen unnecessary data. For no
 | LOC_PREC_THRESHOLD | (optional) The localized single-molecules with X or Y fitting errors bigger than this parameter will be discarded. |
 | ERROR_THRESHOLD |(optional) Fitting error tolerence for FWHM calcuation. |
 |Valid region (X1,X2,Y1,Y2,Z1,Z2) | (optional) Minimum and maximum coordinates of the valid region on X,Y,Z axis |
-| | |
+| MAX_NOISE_GRAY | max removal gray value, which is used in noise removal module |
 ### Example
 
 * Find fibers with X and Y range from 20nm to 45nm. And their minimum length of Z slices should larger than 100nm
