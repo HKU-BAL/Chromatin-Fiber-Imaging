@@ -102,7 +102,7 @@ class DataManager(object):
         # to avoid too many files store in one directory         
         if(self.save_index%1000==0):
             self.batch_num += 1
-
+        print("self.save_index: ",self.save_index)
         cur_batch_dir =  os.path.join(cur_root,'result_batch_'+str(self.batch_num))
         stat_path = os.path.join(cur_batch_dir,'stat')
         xy_path = os.path.join(cur_batch_dir,'xy')
@@ -138,7 +138,7 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         stat_info = stat_info[cols] 
         stat_info.to_csv(os.path.join(stat_path,str(self.save_index)+'_stat.csv'),index=False)
 
@@ -521,6 +521,113 @@ class FindFiber(object):
                         all_boxes.append(tmp_box)
             all_boxes.append({'x1':x1-shift_val,'x2':x2+shift_val,'y1':y1,'y2':y2})
         return all_boxes
+        pass
+    
+    def _getCenter(self,point_idx):
+        '''
+        '''
+        if(point_idx.shape[0]==1):
+            return point_idx[0][0]
+        else:
+            # more than one point, return the center
+            min_pts = np.amin(point_idx)
+            max_pts = np.amax(point_idx)
+            center_pts = int((max_pts - min_pts)/2) + min_pts
+            return center_pts
+        pass
+
+    def _getAngleByEdge(self,a,b,c):
+        '''
+        return the angle of a,c
+              
+           |\            /|
+         b | \ c     c  / |
+           |  \        /  | b
+           |___\      /___|
+             a          a
+
+        '''
+        #print('a',a,'b',b,'c',c)
+        cos_beta = (a*a + b*b - c*c)  / (2*a*b)  
+        beta = round(math.acos(cos_beta),6)
+        #print('beta',beta)
+        degree = round(beta*(180/math.pi),6) 
+        return degree   
+        pass
+    def calAngle(self,imgMatData):
+        '''
+        calculate the angle for Z-axis
+
+         xz
+
+             |\
+          z  | \ k
+             |  \
+             |---\
+               x
+        '''
+        degree_res = {'xz':None,'yz':None}
+        for k_name in imgMatData:
+            #print(k_name)
+            #print(imgMatData[k_name])
+            n_row,n_col = imgMatData[k_name].shape
+            non_zero_coors = np.nonzero(imgMatData[k_name])
+            #print('non_zero_coors',non_zero_coors)
+            if(k_name=='xz'):
+                # row for the x, col for the z
+                # first, find center (the x coordinates of max gray value) of the bottom z slice
+                
+                bottom_index  = min(non_zero_coors[1])
+                up_index = max(non_zero_coors[1])
+                # bottom points with max gray value
+                bottom_max_value_idx = np.argwhere(imgMatData[k_name][:,bottom_index]==np.amax(imgMatData[k_name][:,bottom_index]))
+                # top points with max gray value
+                top_max_value_idx = np.argwhere(imgMatData[k_name][:,up_index]==np.amax(imgMatData[k_name][:,up_index]))
+                bottom_center = self._getCenter(bottom_max_value_idx)
+                top_center = self._getCenter(top_max_value_idx)
+                #print('bottom_max_value_idx: ',bottom_max_value_idx,'top_max_value_idx: ',top_max_value_idx)
+                #print("bottom_center: ",bottom_center,"top_center: ",top_center)
+                
+                # calculate the angle
+                if(top_center==bottom_center):
+                     degree_res['xz'] = 90
+                     continue 
+                z_length = (up_index - bottom_index) * self.zSlice
+                # point1 (bottom_center*self.nm_per_pixel,bottom_index*self.zSlice),
+                # point2 (top_center*self.nm_per_pixel,up_index*self.zSlice)
+                x1_minus_x2 = (bottom_center*self.nm_per_pixel) - (top_center*self.nm_per_pixel)
+                z1_minus_z2 = (bottom_index*self.zSlice) - (up_index*self.zSlice)
+                k_length = np.sqrt((x1_minus_x2*x1_minus_x2)+(z1_minus_z2*z1_minus_z2)) 
+                x_length = abs(top_center-bottom_center)*self.nm_per_pixel   
+                xz_degree = self._getAngleByEdge(x_length,z_length,k_length)
+                #print('xz\n','bottom_center',bottom_center,'top_center',top_center,'\nx_length',x_length,'z_length',z_length,'k_length',k_length)
+                #print('xz_degree:',xz_degree) 
+                degree_res['xz'] = xz_degree
+                pass
+            elif(k_name=='yz'):
+                # row for z, and col for y
+                bottom_z_idx = non_zero_coors[0][0] 
+                top_z_idx = non_zero_coors[0][-1]
+                bottom_max_value_y_idx = np.argwhere(imgMatData[k_name][bottom_z_idx,:]==np.amax(imgMatData[k_name][bottom_z_idx,:])) 
+                bottom_center_y = self._getCenter(bottom_max_value_y_idx) 
+                top_max_value_y_idx = np.argwhere(imgMatData[k_name][top_z_idx,:]==np.amax(imgMatData[k_name][top_z_idx,:])) 
+                top_center_y = self._getCenter(top_max_value_y_idx)
+                
+                # calculate the angle 
+                if(bottom_center_y==top_center_y):
+                    degree_res['yz'] = 90
+                    continue
+                z_length  = (up_index - bottom_index) * self.zSlice
+                y_length = abs(top_center_y-bottom_center_y)*self.nm_per_pixel
+                y1_minus_y2 = (bottom_center_y*self.nm_per_pixel) - (top_center_y*self.nm_per_pixel)
+                z1_minus_z2 = (bottom_z_idx*self.zSlice) - (top_z_idx*self.zSlice)
+                k_length = np.sqrt(y1_minus_y2*y1_minus_y2+z1_minus_z2*z1_minus_z2)
+                #print('yz\n','bottom_center_y',bottom_center_y,'top_center_y',top_center_y,'\ny_length',y_length,'z_length',z_length,'k_length',k_length)
+                yz_degree = self._getAngleByEdge(y_length,z_length,k_length)
+                degree_res['yz'] = yz_degree
+                pass
+        #print(degree_res)
+        return degree_res 
         pass  
     def calLength(self,bbox,img,axis):
 
@@ -586,10 +693,13 @@ class FindFiber(object):
                     'median_FWHM':median_FWHM,'median_FWHM_err':median_FWHM_err,\
                     'whole_FWHM':whole_FWHM,'whole_err':whole_err  }
         return cur_info,clipFlag
-    def _setInfoToStat(self,stat_info,add_info,prefix=''):
+    def _setInfoToStat(self,stat_info,add_info,prefix=None):
         
         for key in add_info:
-            new_key = prefix + '_' + key
+            if(prefix):
+                new_key = prefix + '_' + key
+            else:
+                new_key = key
             stat_info[new_key] = [add_info[key]]
         return stat_info
         pass
@@ -679,6 +789,7 @@ class FindFiber(object):
 
         '''
         figure_data = {}
+        imgMat_data = {}
         # generate xy_figure
         clusterImg = clusterImg[bbox['x1']:bbox['x2']+1,bbox['y1']:bbox['y2']+1]
         clusterImg_transpose = clusterImg.T
@@ -723,14 +834,17 @@ class FindFiber(object):
         # generate xz projection
         
         xz_bbox = {'x1':max(z_format_pts[0].min()-4,0),'x2':min(z_format_pts[0].max()+4,wholeImg.shape[0]),'y1':z_format_pts[2].min(),'y2':z_format_pts[2].max()}       
-        xz_figure, _ = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=xz_bbox)
+        xz_figure, _, xz_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=xz_bbox)
         figure_data['xz'] = xz_figure   
+        imgMat_data['xz'] = xz_img
  
         # generate yz projection
         yz_bbox = {'y1':max(z_format_pts[1].min()-4,0),'y2':min(z_format_pts[1].max()+4,wholeImg.shape[1]),'x1':z_format_pts[2].min(),'x2':z_format_pts[2].max()}
-        yz_figure, _ = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=yz_bbox)
-        figure_data['yz'] = yz_figure 
-        return figure_data 
+        yz_figure, _, yz_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=yz_bbox)
+        figure_data['yz'] = yz_figure
+        imgMat_data['yz'] = yz_img
+ 
+        return figure_data,imgMat_data 
 
         
         pass 
@@ -799,7 +913,8 @@ class FindFiber(object):
             flag,z_slice_pts,z_slice_ranges = self.checkZContinues(cur_cluster)
             logging.info("check continue Z complete")
             # remove the first and end slices
-            pseudo_z_length = (len(z_slice_ranges) - self.myDataLoader.lateral_shifted)* self.zSlice
+            #pseudo_z_length = (len(z_slice_ranges) - self.myDataLoader.lateral_shifted)* self.zSlice
+            pseudo_z_length = len(z_slice_ranges) * self.zSlice
 
             # if the total Z length of this cluster is smaller than the Z threshold, 
             # there is no need to analyze this cluster  
@@ -835,8 +950,10 @@ class FindFiber(object):
                     
                     
                     # generate visualizations
-                    figureData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img)
+                    figureData,imgMatData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img)
                     logging.info("figure rendering complete") 
+                    angle_res = self.calAngle(imgMatData) 
+                    stat_info = self._setInfoToStat(stat_info,angle_res,'angle')
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
                     logging.info("saveData complete")
                     find_coordinates[tmp_coors] = True

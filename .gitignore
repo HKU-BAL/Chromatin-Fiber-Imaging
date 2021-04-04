@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 findFiber26032021.py
 findFiber_backup.py
+backups/

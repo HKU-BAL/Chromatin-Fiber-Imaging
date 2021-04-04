@@ -39,16 +39,22 @@ class DataLoader(object):
         '''
         for convinient, use plt heatmap to generate the image 
         
+        return matplotlib figure, ax, original gray matrix
+    
         '''
         if(self.method == 'Average shifted histogram'):
             img, _ = self.averageShiftedHistogram(coors)
         
+
+        # img: numpy 
         if(bbox!=None):
             img = img[bbox['x1']:bbox['x2']+1,bbox['y1']:bbox['y2']+1] 
         
          
-        
+        original_img = img         
         if(y_gap):
+
+
             img = img.T
             
             # gapped one line in y direction 
@@ -94,7 +100,7 @@ class DataLoader(object):
 
 
         
-        return figure,ax
+        return figure,ax, original_img
         
     def loadImage(self,srcData):
         '''
