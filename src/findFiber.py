@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("agg")
 #from matplotlib import pyplot as plt
 import matplotlib.pyplot as plt
-
+import cv2
 import math
 import os
 from lmfit.models import GaussianModel
@@ -154,13 +154,14 @@ class DataManager(object):
         
 
         # save xz projection
-        
-        imgs['xz'].savefig(os.path.join(xz_path,str(self.save_index)+'_xz.png'),transparent=True) 
-        
-        # save yz projection
-        
-        imgs['yz'].savefig(os.path.join(yz_path,str(self.save_index)+'_yz.png'),transparent=True) 
+        # save matplotlib object 
+        #imgs['xz'].savefig(os.path.join(xz_path,str(self.save_index)+'_xz.png'),transparent=True) 
+        cv2.imwrite(os.path.join(xz_path,str(self.save_index)+'_xz.png'),imgs['xz'])
 
+        # save yz projection
+        # save matplotlib object
+        #imgs['yz'].savefig(os.path.join(yz_path,str(self.save_index)+'_yz.png'),transparent=True) 
+        cv2.imwrite(os.path.join(yz_path,str(self.save_index)+'_yz.png'),imgs['yz'])
         self.save_index += 1 
         plt.close('all')    
     
@@ -549,9 +550,12 @@ class FindFiber(object):
         '''
         #print('a',a,'b',b,'c',c)
         cos_beta = (a*a + b*b - c*c)  / (2*a*b)  
-        beta = round(math.acos(cos_beta),6)
-        #print('beta',beta)
-        degree = round(beta*(180/math.pi),6) 
+        try:
+            beta = round(math.acos(cos_beta),6)
+            #print('beta',beta)
+            degree = round(beta*(180/math.pi),6) 
+        except:
+            degree = -1
         return degree   
         pass
     def calAngle(self,imgMatData):
@@ -833,14 +837,16 @@ class FindFiber(object):
         
         # generate xz projection
         
-        xz_bbox = {'x1':max(z_format_pts[0].min()-4,0),'x2':min(z_format_pts[0].max()+4,wholeImg.shape[0]),'y1':z_format_pts[2].min(),'y2':z_format_pts[2].max()}       
-        xz_figure, _, xz_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=xz_bbox)
+        #xz_bbox = {'x1':max(z_format_pts[0].min()-4,0),'x2':min(z_format_pts[0].max()+4,wholeImg.shape[0]),'y1':z_format_pts[2].min(),'y2':z_format_pts[2].max()}       
+        xz_bbox = {'x1':max(z_format_pts[0].min()-self.myDataLoader.lateral_shifted-2,0),'x2':min(z_format_pts[0].max()+self.myDataLoader.lateral_shifted+2,wholeImg.shape[0]),'y1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted+1,0),'y2':min(z_format_pts[2].max()+self.myDataLoader.axial_shifted-1,wholeImg.shape[1])}        
+
+        xz_figure, _, xz_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=xz_bbox,projection='xz')
         figure_data['xz'] = xz_figure   
         imgMat_data['xz'] = xz_img
  
         # generate yz projection
-        yz_bbox = {'y1':max(z_format_pts[1].min()-4,0),'y2':min(z_format_pts[1].max()+4,wholeImg.shape[1]),'x1':z_format_pts[2].min(),'x2':z_format_pts[2].max()}
-        yz_figure, _, yz_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=yz_bbox)
+        yz_bbox = {'y1':max(z_format_pts[1].min()-4,0),'y2':min(z_format_pts[1].max()+4,wholeImg.shape[1]),'x1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted+1,0),'x2':min(z_format_pts[2].max()+self.myDataLoader.axial_shifted-1,wholeImg.shape[1])}
+        yz_figure, _, yz_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=yz_bbox,projection='yz')
         figure_data['yz'] = yz_figure
         imgMat_data['yz'] = yz_img
  
@@ -859,7 +865,7 @@ class FindFiber(object):
         logging.info('extractComponents...')
         all_pts = extractComponents(curImg,num_labels,labels,curZDict)
          
-        logging.info('Number of clusters',num_labels) 
+        logging.info('Number of clusters: '+str(num_labels)) 
         find_coordinates = {}
         count = 0
         
@@ -878,7 +884,7 @@ class FindFiber(object):
                 all_pts = []
             if(len(cur_cluster[0])==0):
                 continue
-            #print("cur_cluster",cur_cluster) 
+            print("cur_cluster",cur_cluster) 
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
             
@@ -912,8 +918,7 @@ class FindFiber(object):
             logging.info("start check Z continuous")       
             flag,z_slice_pts,z_slice_ranges = self.checkZContinues(cur_cluster)
             logging.info("check continue Z complete")
-            # remove the first and end slices
-            #pseudo_z_length = (len(z_slice_ranges) - self.myDataLoader.lateral_shifted)* self.zSlice
+            
             pseudo_z_length = len(z_slice_ranges) * self.zSlice
 
             # if the total Z length of this cluster is smaller than the Z threshold, 
@@ -971,6 +976,7 @@ class FindFiber(object):
                             all_pts = clipped_pts
                          
                     pass
+                
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)
@@ -978,7 +984,7 @@ class FindFiber(object):
                 connectedComponents = self.splitContinueZAsConnected(sorted_continue_z_slice_pts,cur_img)             
                 
                 # add the connectedComponents to the front of the queue
-                print("connectedComponents",connectedComponents)        
+                #print("connectedComponents",connectedComponents)        
                 connectedComponents.extend(all_pts)
                 all_pts = connectedComponents
                 pass
@@ -991,6 +997,7 @@ class FindFiber(object):
         bbox = {}
         
         nonZeroCoor = np.nonzero(img)
+        #print('nonZeroCoor',nonZeroCoor)
         bbox['x1'] = nonZeroCoor[0].min()
         bbox['x2'] = nonZeroCoor[0].max()
         bbox['y1'] = nonZeroCoor[1].min()
@@ -1038,8 +1045,7 @@ class FindFiber(object):
                         
             # judge if the continue z cluster is connected or not 
             cur_cluster_img,curZDict = self.myDataLoader.genNewImg(cur_pts,cur_img,False)
-          
-            
+             
             cur_bbox= self._bbox(cur_cluster_img)
                    
             num_labels, labels = cluster_by_connectedComponents(cur_cluster_img,self.connectedFlag)
@@ -1076,21 +1082,29 @@ class FindFiber(object):
         # get min and max z from the exact z value
 
         # min z of the slice: min z minus shifted value
+        # clip head and tail version 
+        #min_z =  math.floor(z_array[sort_z_args[0]]/self.zSlice)*self.zSlice - self.zSlice*int(self.myDataLoader.axial_shifted-1)  
+        #max_z = min_z + math.ceil((z_array[sort_z_args[-1]]-min_z)/self.zSlice)*self.zSlice +  self.zSlice*int(self.myDataLoader.axial_shifted-1)
          
-        min_z =  math.floor(z_array[sort_z_args[0]]/self.zSlice)*self.zSlice - self.zSlice*int(self.myDataLoader.lateral_shifted/2) 
+        # do not clip head and tail version
+        min_z = math.floor(z_array[sort_z_args[0]]/self.zSlice)*self.zSlice        
+        max_z = min_z + math.ceil((z_array[sort_z_args[-1]]-min_z)/self.zSlice)*self.zSlice
         
-        max_z = min_z + math.ceil((z_array[sort_z_args[-1]]-min_z)/self.zSlice)*self.zSlice +  self.zSlice*int(self.myDataLoader.lateral_shifted/2)
         if((z_array[sort_z_args[-1]]-min_z)%self.zSlice==0):
-            max_z += self.zSlice*int(self.myDataLoader.lateral_shifted/2) 
+            max_z += self.zSlice 
          
-        z_slice_num = int(math.ceil((max_z - min_z)/self.zSlice) )
-         
+        z_slice_num = int(math.ceil((max_z - min_z)/self.zSlice)) + (2*self.myDataLoader.axial_shifted-2)
         
+    
         # check if every z slice has a valid point 
         existed_flag = np.zeros(z_slice_num)
         
-        start = min_z
-        end = min_z + 20
+        # clip version 
+        #start = min_z
+        # not clip version
+        start = min_z - self.zSlice*(self.myDataLoader.axial_shifted-1)
+        end = start + self.zSlice
+        
         z_slice_pts = [None]*z_slice_num
         # x_y_coors is to store which pts belongs which slice
          
@@ -1102,25 +1116,28 @@ class FindFiber(object):
         for i in sort_z_args:
             # find the point belongs to which slice
             #print("z_array[i]",z_array[i])
+
+            # find the current z slice
             while(not(z_array[i]>=start and z_array[i]<end)):
-                start += 20
-                end += 20
+                start += self.zSlice
+                end += self.zSlice
                 index += 1
 
-            # lateral shift also applies to Z axis, 
+            # apply the axial shifts to Z axis, 
             # thus, set the neibor slice as existed, record z slice range
-            for k in range(int(self.myDataLoader.lateral_shifted/2)*-1,int(self.myDataLoader.lateral_shifted/2)+1,1):
-                #print('index',index,'k',k)
+            for k in range(int(self.myDataLoader.axial_shifted-1)*-1,int(self.myDataLoader.axial_shifted-1)+1,1):
+                #print("k",k,'index',index) 
                 existed_z_values[index+k] = [start+self.zSlice*k,end+self.zSlice*k]
             if(z_slice_pts[index]==None):
                 # record exactly points for the current slice, pts: [x array, y array, z array]
                 z_slice_pts[index] = [[],[],[]]
             
+            #print(x_array[i],y_array[i],z_array[i])        
             z_slice_pts[index][0].append(x_array[i])
             z_slice_pts[index][1].append(y_array[i])
             z_slice_pts[index][2].append(z_array[i])
         
-
+        
         if(None in existed_z_values):
             return 0, z_slice_pts, existed_z_values
         else:
@@ -1135,6 +1152,8 @@ class FindFiber(object):
 
         '''
 
+
+        
         interval = []
         gray = []
         tmp_gray = 0

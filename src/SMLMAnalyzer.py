@@ -42,14 +42,16 @@ if __name__ == '__main__':
     parser.add_argument('--Z1',type=int,default=None,help="(optional) the valid minimum Z coordinate")
     parser.add_argument('--Z2',type=int,default=None,help="(optional) the valid maximum Z coordinate")
 
-    parser.add_argument('--Z_SLICE',type=float,default=20, help='set the length of slices on z-axis')
+    parser.add_argument('--Z_SLICE',type=float,default=10, help='set the length of slices on z-axis')
     parser.add_argument('--ERROR_THRESHOLD',type=float,default=6,help='fitting error threshold for gussian')
    
     parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8,help='(required) The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.')
     parser.add_argument('--FRAME_RANGE',type=int,default=None,help='frame range for each of the frame intervals')
     parser.add_argument('--LOC_PREC_THRESHOLD',type=float,default=100,help='filtering options for the localization precision')
     parser.add_argument('--VIS_METHOD',type=str,default='Average shifted histogram',help='visualization method')
-    parser.add_argument('--LATERAL_SHIFT',type=int,default='2',help='lateral shifts')
+    parser.add_argument('--LATERAL_SHIFT',type=int,default=2,help='lateral shifts')
+    parser.add_argument('--AXIAL_SHIFT',type=int,default=4,help='axial shift')
+
     parser.add_argument('--MAX_NOISE_GRAY',type=int,default=8,help='max removal gray value, which is used in noise removal module')    
 
 
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     myValidRegion = {'x1':args.X1,'x2':args.X2,'y1':args.Y1,'y2':args.Y2,'z1':args.Z1,'z2':args.Z2}
     myDataManager = DataManager(args.SAVE_PATH,args.SECOND_PER_FRAME)
     myDataProcessor = DataProcessor()
-    myDataLoader = DataLoader(args.VIS_METHOD,lateral_shifted=args.LATERAL_SHIFT,nm_per_pixel=args.NM_PER_PIXEL,validRegion=myValidRegion)
+    myDataLoader = DataLoader(args.VIS_METHOD,lateral_shifted=args.LATERAL_SHIFT,axial_shifted=args.AXIAL_SHIFT,nm_per_pixel=args.NM_PER_PIXEL,validRegion=myValidRegion)
     # prepare csv data
     myDataManager.data_list,dataCheckFlag = myDataProcessor.prepare(DATA_PATH=args.DATA_PATH,splitFrameLen=args.FRAME_RANGE,locPrecThreshold=args.LOC_PREC_THRESHOLD,magnificationRatio=args.MAGNIFICATION)
     

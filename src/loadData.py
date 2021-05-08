@@ -5,24 +5,24 @@ from matplotlib import pyplot as plt
 from matplotlib.image import imread
 import matplotlib.pyplot as plt
 import cv2
-
-
 class DataLoader(object):
     '''
     Generate the image by different algorithms
 
     '''
-    def __init__(self,method, lateral_shifted,nm_per_pixel,validRegion):
+    def __init__(self,method, lateral_shifted,axial_shifted,nm_per_pixel,validRegion):
         # settings
         self.method = method
         self.nm_per_pixel = 10
         
         if(method=='Average shifted histogram'):
-            self.lateral_shifted = lateral_shifted 
+            self.lateral_shifted = lateral_shifted
+            self.axial_shifted = axial_shifted
+ 
         self.validRegion = validRegion
         pass
     
-    def genHeatMap(self,img):
+    def genHeatMap(self,img,colors="hot"):
 
         '''
         mat: 2D array
@@ -31,11 +31,66 @@ class DataLoader(object):
 
         '''
         figure, ax = plt.subplots()
-        ax.imshow(img, interpolation='nearest',cmap="hot",origin="upper")
+        ax.imshow(img, interpolation='nearest',cmap=colors,origin="upper")
         ax.axis('off')
         return figure,ax
 
-    def visualize(self,coors,y_gap=False,x_gap=False,bbox=None):
+
+
+    def img_resize(self,image):
+        height, width = image.shape[0], image.shape[1] 
+        width_new = 480
+        height_new = 620
+    
+        if width / height >= width_new / height_new:
+            img_new = cv2.resize(image, (width_new, int(height * width_new / width)),interpolation = cv2.INTER_AREA)
+        else:
+            img_new = cv2.resize(image, (int(width * height_new / height), height_new),interpolation = cv2.INTER_AREA)
+        return img_new
+
+    def genRGB(self,img,colorDirection):
+
+        '''
+        '''
+        # initialize the HSV mat,size=(x,y,3)
+        original_row = img.shape[0]
+        original_col = img.shape[1]
+        hsv = np.zeros((original_row,original_col,3))
+        if(colorDirection=='row'):
+            color_step = max(int(360/original_row),1) 
+
+            pass
+        elif(colorDirection=='col'):
+            color_step = max(int(360/original_col),1)
+
+        max_gray_value = np.max(img)
+         
+        
+        for i in range(original_row):
+             for j in range(original_col):
+                 if(img[i][j]==0):
+                     continue
+                 if(colorDirection=='row'):
+                     hsv[i][j][0] = (i*color_step)%360
+                     
+                     hsv[i][j][1] = 1
+
+                 elif(colorDirection=='col'):
+                     hsv[i][j][0] = (j*color_step)%360
+                     hsv[i][j][1] = 1
+                 
+                 hsv[i][j][2] = min(int((img[i][j]/max_gray_value+0.3)*255),255)
+                 
+                 pass
+        
+        hsv = self.img_resize(hsv)
+        hsv = np.float32(hsv)
+        bgrimg = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+         
+        return bgrimg 
+        pass
+
+    def visualize(self,coors,y_gap=False,x_gap=False,bbox=None,projection='xy'):
         '''
         for convinient, use plt heatmap to generate the image 
         
@@ -43,73 +98,41 @@ class DataLoader(object):
     
         '''
         if(self.method == 'Average shifted histogram'):
-            img, _ = self.averageShiftedHistogram(coors)
+            
+            img, _ = self.averageShiftedHistogram(coors,projection=projection)
         
 
         # img: numpy 
         if(bbox!=None):
+            
             img = img[bbox['x1']:bbox['x2']+1,bbox['y1']:bbox['y2']+1] 
         
          
         original_img = img         
         if(y_gap):
-
-
             img = img.T
-            
-            # gapped one line in y direction 
-            new_size = (img.shape[0]*2+2,img.shape[1]+2)
-            new_img = np.zeros(new_size)
-            k = 1
-            for i in range(img.shape[0]):
-                for j in range(img.shape[1]):
-                    
-                    new_img[k][j] = img[i][j] 
-                    pass 
-                k += 2
-            img = new_img   
-            img = np.flipud(img)     
+            img = np.flipud(img)    
+            cv2_img = self.genRGB(img,colorDirection='row')
+            return cv2_img,None,original_img
             pass
         elif(x_gap):
             
-            img = img.T
-
-            # gapped one line in x direction
-            new_size = (img.shape[0]+2,img.shape[1]*2+2)
-            new_img = np.zeros(new_size)
-            k = 1
-            #print('img.shape',img.shape,'new_img.shape',new_img.shape)
-            for j in range(img.shape[1]):
-                for i in range(img.shape[0]):
-
-                    new_img[i][k] = img[i][j]
-                    
-                k += 2
-            img = new_img
-
-            
-        
-        else:
             img = img.T 
+            cv2_img = self.genRGB(img,colorDirection='col') 
+            return cv2_img,None,original_img
+        else:
+            img = img.T         
+            figure,ax = self.genHeatMap(img) 
+            return figure,ax, original_img
         
-          
-
-
-        
-        figure,ax = self.genHeatMap(img)
-
-
-        
-        return figure,ax, original_img
-        
-    def loadImage(self,srcData):
+    def loadImage(self,srcData,projection='xy'):
         '''
         ''' 
         coors = self.readCoordinates(srcData)
         #print("coors",coors)
         if(self.method=='Average shifted histogram'):
         
-            return self.averageShiftedHistogram(coors)
+            return self.averageShiftedHistogram(coors,projection=projection)
         pass
     
 
@@ -117,7 +140,7 @@ class DataLoader(object):
 
    
 
-    def genNewImg(self,pts,original_img,copy_flag,bbox=None):
+    def genNewImg(self,pts,original_img,copy_flag,bbox=None,projection='xy'):
 
         '''
         generate a new image by update a specific region of an old image
@@ -143,7 +166,7 @@ class DataLoader(object):
         # update the new_img
         if(self.method=='Average shifted histogram'):
 
-            return self.averageShiftedHistogram(pts,new_img) 
+            return self.averageShiftedHistogram(pts,new_img,projection=projection) 
 
         pass    
 
@@ -195,17 +218,32 @@ class DataLoader(object):
         pass    
 
 
-    def averageShiftedHistogram(self,coors,img=None):
+    def averageShiftedHistogram(self,coors,img=None,projection='xy'):
 
         '''
 
         This method was first proposed by ThunderStorm
         Generate the 2D visualization image for the csv data
         params: srcData, DataFrame
-
+                projection: 'xy' lateral_shift in "X" and lateral_shift in 'Y'
+                            'xz' lateral_shift in 'X' and axial_shift in 'Y'
+                            'yz' axial_shift in 'X' and lateral_shift in 'Y'
+              
+      
         '''
-    
-        
+        x_shift = 1
+        y_shift = 1
+        #print("averageShiftedHistogram",img)
+        if(projection=='xy'):
+            x_shift = self.lateral_shifted
+            y_shift = self.lateral_shifted
+        elif(projection=='xz'):
+            x_shift = self.lateral_shifted
+            y_shift = self.axial_shifted
+        elif(projection=='yz'):
+            x_shift = self.axial_shifted
+            y_shift = self.lateral_shifted 
+        #print('coors',coors) 
         if('numpy' not in str(type(img)) and img==None):
             # create a new image
             # get the size of the image for the visualization
@@ -213,23 +251,26 @@ class DataLoader(object):
             maxX = coors[0].max()
             minY = coors[1].min()
             maxY = coors[1].max()
-            #print(coors)
-            imgSize = [math.ceil(maxX)+self.lateral_shifted+10,math.ceil(maxY)+self.lateral_shifted+10]
+            
+            imgSize = [math.ceil(maxX)+x_shift*2+10,math.ceil(maxY)+y_shift*2+10]
+            
             img = np.zeros(imgSize)
 
-        max_point_gray_value = pow(2,self.lateral_shifted)
+        max_point_gray_value = pow(2,(x_shift + y_shift - 2))
 
         # z_value is to store the z axis value with specifican (x,y)
         # z_value = {(x,y):[z1,z2]}
         z_value  = {}
-        
+         
         for index in range(coors[0].shape[0]):
 
             center_x = coors[0][index]
             center_y  = coors[1][index]
             #print('center_x',center_x,'center_y',center_y)
-            for i in range(-1*int(self.lateral_shifted/2),int(self.lateral_shifted/2)+1):
-                for j in range(-1*int(self.lateral_shifted/2),int(self.lateral_shifted/2)+1):
+
+            for i in range(-1*int(x_shift-1),int(x_shift-1)+1):
+                for j in range(-1*int(y_shift-1),int(y_shift-1)+1):
+
                     shift_value = abs(i) + abs(j)
                     
                     tmp_gray_value = max_point_gray_value/pow(2,shift_value)
