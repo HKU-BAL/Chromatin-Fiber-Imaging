@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.image import imread
 import matplotlib.pyplot as plt
 import cv2
+
 class DataLoader(object):
     '''
     Generate the image by different algorithms
@@ -47,7 +48,29 @@ class DataLoader(object):
         else:
             img_new = cv2.resize(image, (int(width * height_new / height), height_new),interpolation = cv2.INTER_AREA)
         return img_new
+    def apply_brightness_contrast(self,input_img, brightness = 0, contrast = 0):
+        if brightness != 0:
+            if brightness > 0:
+                shadow = brightness
+                highlight = 255
+            else:
+                shadow = 0
+                highlight = 255 + brightness
+            alpha_b = (highlight - shadow)/255
+            gamma_b = shadow
+        
+            buf = cv2.addWeighted(input_img, alpha_b, input_img, 0, gamma_b)
+        else:
+            buf = input_img.copy()
+    
+        if contrast != 0:
+            f = 131*(contrast + 127)/(127*(131-contrast))
+            alpha_c = f
+            gamma_c = 127*(1-f)
+        
+            buf = cv2.addWeighted(buf, alpha_c, buf, 0, gamma_c)
 
+        return buf
     def genRGB(self,img,colorDirection):
 
         '''
@@ -55,6 +78,8 @@ class DataLoader(object):
         # initialize the HSV mat,size=(x,y,3)
         original_row = img.shape[0]
         original_col = img.shape[1]
+        max_gray_value = np.max(img)
+        '''
         hsv = np.zeros((original_row,original_col,3))
         if(colorDirection=='row'):
             color_step = max(int(360/original_row),1) 
@@ -71,22 +96,36 @@ class DataLoader(object):
                  if(img[i][j]==0):
                      continue
                  if(colorDirection=='row'):
-                     hsv[i][j][0] = (i*color_step)%360
-                     
-                     hsv[i][j][1] = 1
+                     #hsv[i][j][0] = (i*color_step)%360
+                     hsv[i][j][1] = 30+img[i][j]*25 
+                     hsv[i][j][1] = min(img[i][j]/max_gray_value+0.5,1)
 
                  elif(colorDirection=='col'):
-                     hsv[i][j][0] = (j*color_step)%360
-                     hsv[i][j][1] = 1
+                     #hsv[i][j][0] = (j*color_step)%360
+                     hsv[i][j][0] = 30+img[i][j]*25
+                     hsv[i][j][1] = min(img[i][j]/max_gray_value+0.5,1)
                  
-                 hsv[i][j][2] = min(int((img[i][j]/max_gray_value+0.3)*255),255)
-                 
+                 #hsv[i][j][2] = min(int((img[i][j]/max_gray_value+0.3)*255),255)
+                 hsv[i][j][2] = min(int(img[i][j]*25+30),255)
                  pass
         
         hsv = self.img_resize(hsv)
         hsv = np.float32(hsv)
         bgrimg = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
-         
+        '''
+        # adjust the brightness and contrast         
+        for i in range(img.shape[0]):
+            for j in range(img.shape[1]):
+                if(img[i][j]==0):
+                    continue
+                #img[i][j] = min(int(img[i][j]/max_gray_value)*255)+30,255)
+                tmp_val = math.ceil((img[i][j]/max_gray_value)*255)
+                img[i][j] =min(255,10+int(tmp_val*2))       
+                #print("img[i][j]",img[i][j]) 
+        im_color =  cv2.applyColorMap(img, cv2.COLORMAP_HOT)
+        
+        
+        return self.img_resize(im_color) 
         return bgrimg 
         pass
 
@@ -256,12 +295,18 @@ class DataLoader(object):
             
             img = np.zeros(imgSize)
 
-        max_point_gray_value = pow(2,(x_shift + y_shift - 2))
+        #max_point_gray_value = pow(2,(x_shift + y_shift - 2))
+        
+        max_point_gray_value = x_shift * y_shift
+        x_bin_size = max_point_gray_value/x_shift
+        y_bin_size = max_point_gray_value/y_shift
+        
 
         # z_value is to store the z axis value with specifican (x,y)
         # z_value = {(x,y):[z1,z2]}
         z_value  = {}
-         
+        
+ 
         for index in range(coors[0].shape[0]):
 
             center_x = coors[0][index]
@@ -270,13 +315,17 @@ class DataLoader(object):
 
             for i in range(-1*int(x_shift-1),int(x_shift-1)+1):
                 for j in range(-1*int(y_shift-1),int(y_shift-1)+1):
-
+                    '''
                     shift_value = abs(i) + abs(j)
                     
                     tmp_gray_value = max_point_gray_value/pow(2,shift_value)
+                    '''
                     
+                    tmp_x_value  = max_point_gray_value - abs(i) * x_bin_size
+                    tmp_y_bin = tmp_x_value/y_shift
+                    tmp_gray_value = tmp_x_value - tmp_y_bin * abs(j)  
                     img[center_x+i][center_y+j] += tmp_gray_value
-                   
+                    #print("i",i,'j',j,'tmp_gray_value',tmp_gray_value)  
             if(len(coors)>2):
                 # record the z value of the center x and center y
                 x_y_pair = (center_x,center_y)
