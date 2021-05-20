@@ -6,6 +6,10 @@ from matplotlib.image import imread
 import matplotlib.pyplot as plt
 import cv2
 
+
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
 class DataLoader(object):
     '''
     Generate the image by different algorithms
@@ -118,9 +122,12 @@ class DataLoader(object):
             for j in range(img.shape[1]):
                 if(img[i][j]==0):
                     continue
+                before_gray = img[i][j]
                 #img[i][j] = min(int(img[i][j]/max_gray_value)*255)+30,255)
                 tmp_val = math.ceil((img[i][j]/max_gray_value)*255)
-                img[i][j] =min(255,10+int(tmp_val*2))       
+                img[i][j] =min(255,10+int(tmp_val*2))
+                after_gray = img[i][j]
+                #logging.info("adjust:"+str(i)+' '+str(j)+' '+str(before_gray)+' '+str(after_gray)) 
                 #print("img[i][j]",img[i][j]) 
         im_color =  cv2.applyColorMap(img, cv2.COLORMAP_HOT)
         
@@ -155,7 +162,7 @@ class DataLoader(object):
             return cv2_img,None,original_img
             pass
         elif(x_gap):
-            
+             
             img = img.T 
             cv2_img = self.genRGB(img,colorDirection='col') 
             return cv2_img,None,original_img

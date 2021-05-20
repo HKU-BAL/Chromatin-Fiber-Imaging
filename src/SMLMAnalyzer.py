@@ -52,8 +52,8 @@ if __name__ == '__main__':
     parser.add_argument('--LATERAL_SHIFT',type=int,default=2,help='lateral shifts')
     parser.add_argument('--AXIAL_SHIFT',type=int,default=4,help='axial shift')
 
-    parser.add_argument('--MAX_NOISE_GRAY',type=int,default=8,help='max removal gray value, which is used in noise removal module')    
-
+    parser.add_argument('--MAX_NOISE_GRAY',type=int,default=8,help='max removal gray value, which is used in noise removal module')
+    parser.add_argument('--Z_GAP_TOLERANCE',type=float,default=50,help='z gap tolerance threshold')
 
  
     args = parser.parse_args()
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         logging.info("incorrent input!")
         exit()
  
-    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY)
+    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY,z_gap_tolerance=args.Z_GAP_TOLERANCE)
     myFiberIdentifier.identifyFiber()
 
 

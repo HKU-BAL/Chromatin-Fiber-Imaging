@@ -173,7 +173,7 @@ class DataManager(object):
         '''
         index = []
         z_slice_record = []
-        print("extractCsvFromZSlicePts z_slice_pts:",z_slice_pts)
+        #print("extractCsvFromZSlicePts z_slice_pts:",z_slice_pts)
         for slice_index in range(len(z_slice_pts)):
             if(z_slice_pts[slice_index]==None):
                 continue
@@ -405,7 +405,7 @@ class FindFiber(object):
     Find fibers with the specific conditions
 
     '''
-    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray):
+    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray,z_gap_tolerance):
         # basic settings
        
         self.minX = minX
@@ -422,6 +422,8 @@ class FindFiber(object):
         self.ERROR_THRESHOLD = error_threshold 
         self.nm_per_pixel = nm_per_pixel
         self.max_removel_gray = max_removel_gray
+        self.z_gap_tolerance = z_gap_tolerance
+
     def identifyFiber(self):
 
         '''
@@ -731,10 +733,163 @@ class FindFiber(object):
         return [np.asarray(new_x),np.asarray(new_y),np.asarray(new_z)]   
         pass 
 
- 
+    def _rmZPts(self,z_slice_pts,direction='1'):
+        
+        '''
+
+        iterate the z slices and remove the head points or tail points
+
+        '''
+        if(direction==1):
+            start = 0
+            end = len(z_slice_pts) - 1
+        elif(direction==-1):
+            start = len(z_slice_pts) - 1
+            end = 0
+        clipped_z_slice_pts = None
+        #print("start",start,"end",end) 
+        for i in range(start,end,direction):
+        
+            tmp_slice_pts = z_slice_pts[i]
+            #print('#'*20)
+            #print("cur slice",tmp_slice_pts)
+            if(tmp_slice_pts == None):
+                # ignore none center points
+                continue
+             
+            if(len(tmp_slice_pts[0])>1):
+                # stop when encountering dense slice
+                break
+            next_slice_index = i
+            # move forward to get the next slice with center points
+            for j in range(i+direction,end+1,direction): 
+                #print("j",j) 
+                if(z_slice_pts[j]!=None):
+                     
+                    next_slice_index = j
+                    break
+
+            cur_gap = abs(next_slice_index - i) * self.zSlice
+            # remove the slices with large z gap
+            if(cur_gap >= self.z_gap_tolerance):
+                #print("current gap",cur_gap,"gap tolerance",self.z_gap_tolerance)
+                if(direction==1):
+                     clipped_z_slice_pts = z_slice_pts[next_slice_index:]
+                     
+                elif(direction==-1):
+                     clipped_z_slice_pts = z_slice_pts[:next_slice_index+1]
+                 
+                break
+            cur_x = tmp_slice_pts[0][0]
+            cur_y = tmp_slice_pts[1][0]
+            next_slice_pts = z_slice_pts[next_slice_index]
+            #print("next_slice_pts",next_slice_pts)
+
+            ''' 
+            if(len(next_slice_pts[0])>1):
+                print("dense next slice",next_slice_pts)
+                # z gap < tolerance and next slice is dense slice, do not need to remove any points
+                break
+            '''
+            if((cur_x not in z_slice_pts[next_slice_index][0]) and (cur_y not in z_slice_pts[next_slice_index][1])):
+                # not in a line ,we can accept this as noise even when z gap is relatively small
+                # keep searching
+               
+                continue
+
+            else:
+                
+                #print("overlapped x or y")
+                # do not keep searching
+                break
+
+
+        ''' 
+        tmp = [None]*(self.myDataloader.axial_shifted -1)
+             
+        if(direction == 1 and z_slice_pts[0]!=None):
+            z_slice_pts.extend(tmp)
+            tmp = [None]*(self.myDataloader.axial_shifted -1)
+            nearest_z_range = z_ranges[0]
+            for k in range(1, self.myDataloader.axial_shifted):
+                index = self.myDataloader.axial_shifted-k
+                tmp[index] = [nearest_z_range[0]-self.zSlice*k,nearest_z_range[1]-self.zSlice*k]
+
+            tmp.extend(z_ranges)
+            z_ranges = tmp
+        elif(direction == -1 and z_slice_pts[-1]!=None):
+            tmp.extend(z_slice_pts)
+            z_slice_pts = tmp
+            nearest_z_range = z_ranges[-1] 
+            tmp = [None]*(self.myDataloader.axial_shifted -1)
+            for k in range(1,self.myDataloader.axial_shifted):
+                tmp[k] = [nearest_z_range[0]+self.zSlice*k, nearest_z_range[1]+self.zSlice*k]
+            z_ranges.extend(tmp)
+
+        '''
+        if(clipped_z_slice_pts!=None):
+            
+            return clipped_z_slice_pts
+        return z_slice_pts
+        
+
+    def rmOutlierZ(self,z_slice_pts):
+
+        '''
+        based on localized coordinates, remove outlier points with z
+
+        remove condition: 1. only one point in the z slice; 
+                          2. the z gap satisfy removing threshold 
+                          3. only remove the head and tail, once encountered   
+                          4. can not distory the connectivity of XY projection image
+        
+        starts from the head: if(more than two points in the slice) stop
+                              if(gap < threshod and x or y not the same between the neiboring points) continue to the next slice
+                              else:stop
+
+        starts from the tail: smiliar as the above
+
+        check xy connectivity
+        
+        return cluster_pts
+
+
+        '''
+        #print("rm outlier Z module ...")
+        #print("current z_slice_pts",z_slice_pts) 
+   
+        new_z_slice_pts = self._rmZPts(z_slice_pts,direction=1)
+        
+        new_z_slice_pts = self._rmZPts(new_z_slice_pts,direction=-1)
+        # add shifted points to z_slice_pts,z_ranges
+        # get cluter points
+
+        tmp_x = []
+        tmp_y = []
+        tmp_z = []
+        #print("new_z_slice_pts: ",new_z_slice_pts)
+         
+        if(len(new_z_slice_pts)!=len(z_slice_pts)):
+            for tmp_z_slice in new_z_slice_pts:
+                
+                if(tmp_z_slice==None):
+                    continue
+                for i in range(len(tmp_z_slice[0])):
+
+                    tmp_x.append(tmp_z_slice[0][i])
+                    tmp_y.append(tmp_z_slice[1][i])
+                    tmp_z.append(tmp_z_slice[2][i])
+
+            cur_cluster = [np.asarray(tmp_x),np.asarray(tmp_y),np.asarray(tmp_z)]
+        else:
+            cur_cluster = None
+            
+        return [cur_cluster]
+         
+
     def clipCluster(self,curClusterImg,curBBox,clusterPts,gray_threshold):
         '''
-        This is a brute force way, we might need to try other algorthims in the future 
+        This is a brute force way, we might try other algorthims in the future 
         1. set points that <= gray_threshould as 0 in the image mat
         2. recalculate the connected componets
         3. collect the information of points and return them 
@@ -876,36 +1031,30 @@ class FindFiber(object):
             cur_cluster = all_pts[0]
             
         
-
+            print("cur_cluster",cur_cluster)
             count += 1
             if(len(all_pts)>1):
                 all_pts = all_pts[1:]
             else:
                 all_pts = []
             if(len(cur_cluster[0])==0):
+                logging.info("empty current cluster")
                 continue
-            print("cur_cluster",cur_cluster) 
+            
+             
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
             
             # bbox 
             bbox = self._bbox(cur_img)
-            
-
-
-            ''' 
-            tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2'])
-            if(tmp_coors in find_coordinates):
-                continue 
-            
-            logging.info("current region %s" %(tmp_coors)) 
-            '''
+             
             # check the max gray value of the cluster 
             cur_max_gray,cur_sum_gray = self.myModel.calMaxGrayVal(cur_img,bbox)
 
             # fingerprint of this molecular cluster            
             tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' + str(cur_sum_gray)
             if(tmp_coors in find_coordinates):
+                logging.info('current cluster has been identified before')
                 continue
             find_coordinates[tmp_coors] = True 
             logging.info("current region %s" %(tmp_coors))
@@ -913,7 +1062,7 @@ class FindFiber(object):
             #print("self.minGray",self.minGray,"cur_max_gray",cur_max_gray) 
             if(self.minGray and cur_max_gray < self.minGray):
                 continue
-  
+            
             # check if the cluster has continue Z slice
             logging.info("start check Z continuous")       
             flag,z_slice_pts,z_slice_ranges = self.checkZContinues(cur_cluster)
@@ -924,18 +1073,20 @@ class FindFiber(object):
             # if the total Z length of this cluster is smaller than the Z threshold, 
             # there is no need to analyze this cluster  
             if(pseudo_z_length<self.minZ):
+                logging.info("z length is not satisfying")
                 continue
-                        
+                      
             # if the current cluster does not has continuous Z slice
             # we extract the maximum continue Z 
             if(flag==1):
                 
+                          
                        
                 x_info,clipFlagX = self.calLength(bbox,cur_img,'x') 
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
                 logging.info("X Y dimension calculation complete") 
-               
+                 
                 if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
                     
                     
@@ -976,7 +1127,13 @@ class FindFiber(object):
                             all_pts = clipped_pts
                          
                     pass
+                # clip the cluster by z slice
+                zCliped_pts = self.rmOutlierZ(z_slice_pts)
                 
+                if(zCliped_pts[0] !=None):
+                    zCliped_pts.extend(all_pts)
+                    all_pts = zCliped_pts
+ 
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)
