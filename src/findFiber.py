@@ -747,12 +747,11 @@ class FindFiber(object):
             start = len(z_slice_pts) - 1
             end = 0
         clipped_z_slice_pts = None
-        #print("start",start,"end",end) 
+         
         for i in range(start,end,direction):
         
             tmp_slice_pts = z_slice_pts[i]
-            #print('#'*20)
-            #print("cur slice",tmp_slice_pts)
+            
             if(tmp_slice_pts == None):
                 # ignore none center points
                 continue
@@ -763,7 +762,7 @@ class FindFiber(object):
             next_slice_index = i
             # move forward to get the next slice with center points
             for j in range(i+direction,end+1,direction): 
-                #print("j",j) 
+                 
                 if(z_slice_pts[j]!=None):
                      
                     next_slice_index = j
@@ -772,7 +771,7 @@ class FindFiber(object):
             cur_gap = abs(next_slice_index - i) * self.zSlice
             # remove the slices with large z gap
             if(cur_gap >= self.z_gap_tolerance):
-                #print("current gap",cur_gap,"gap tolerance",self.z_gap_tolerance)
+                
                 if(direction==1):
                      clipped_z_slice_pts = z_slice_pts[next_slice_index:]
                      
@@ -783,7 +782,7 @@ class FindFiber(object):
             cur_x = tmp_slice_pts[0][0]
             cur_y = tmp_slice_pts[1][0]
             next_slice_pts = z_slice_pts[next_slice_index]
-            #print("next_slice_pts",next_slice_pts)
+            
 
             ''' 
             if(len(next_slice_pts[0])>1):
@@ -804,29 +803,7 @@ class FindFiber(object):
                 break
 
 
-        ''' 
-        tmp = [None]*(self.myDataloader.axial_shifted -1)
-             
-        if(direction == 1 and z_slice_pts[0]!=None):
-            z_slice_pts.extend(tmp)
-            tmp = [None]*(self.myDataloader.axial_shifted -1)
-            nearest_z_range = z_ranges[0]
-            for k in range(1, self.myDataloader.axial_shifted):
-                index = self.myDataloader.axial_shifted-k
-                tmp[index] = [nearest_z_range[0]-self.zSlice*k,nearest_z_range[1]-self.zSlice*k]
-
-            tmp.extend(z_ranges)
-            z_ranges = tmp
-        elif(direction == -1 and z_slice_pts[-1]!=None):
-            tmp.extend(z_slice_pts)
-            z_slice_pts = tmp
-            nearest_z_range = z_ranges[-1] 
-            tmp = [None]*(self.myDataloader.axial_shifted -1)
-            for k in range(1,self.myDataloader.axial_shifted):
-                tmp[k] = [nearest_z_range[0]+self.zSlice*k, nearest_z_range[1]+self.zSlice*k]
-            z_ranges.extend(tmp)
-
-        '''
+        
         if(clipped_z_slice_pts!=None):
             
             return clipped_z_slice_pts
@@ -1031,7 +1008,7 @@ class FindFiber(object):
             cur_cluster = all_pts[0]
             
         
-            print("cur_cluster",cur_cluster)
+            #print("cur_cluster",cur_cluster)
             count += 1
             if(len(all_pts)>1):
                 all_pts = all_pts[1:]

@@ -83,6 +83,7 @@ class DataLoader(object):
         original_row = img.shape[0]
         original_col = img.shape[1]
         max_gray_value = np.max(img)
+        
         '''
         hsv = np.zeros((original_row,original_col,3))
         if(colorDirection=='row'):
@@ -117,15 +118,24 @@ class DataLoader(object):
         hsv = np.float32(hsv)
         bgrimg = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
         '''
-        # adjust the brightness and contrast         
+        # adjust the brightness and contrast  
+        '''
+        for i in range(img.shape[0]):
+            tmp_line = ''
+            for j in range(img.shape[1]):
+                tmp_line += str(img[i][j])+'\t'
+            tmp_line = tmp_line.strip()
+            print(tmp_line) 
+        '''      
         for i in range(img.shape[0]):
             for j in range(img.shape[1]):
                 if(img[i][j]==0):
                     continue
                 before_gray = img[i][j]
                 #img[i][j] = min(int(img[i][j]/max_gray_value)*255)+30,255)
-                tmp_val = math.ceil((img[i][j]/max_gray_value)*255)
-                img[i][j] =min(255,10+int(tmp_val*2))
+                tmp_val = math.ceil((img[i][j]/max_gray_value)*254)
+                img[i][j] =min(254,10+int(tmp_val*2))
+                
                 after_gray = img[i][j]
                 #logging.info("adjust:"+str(i)+' '+str(j)+' '+str(before_gray)+' '+str(after_gray)) 
                 #print("img[i][j]",img[i][j]) 
@@ -162,7 +172,7 @@ class DataLoader(object):
             return cv2_img,None,original_img
             pass
         elif(x_gap):
-             
+                         
             img = img.T 
             cv2_img = self.genRGB(img,colorDirection='col') 
             return cv2_img,None,original_img
@@ -302,12 +312,13 @@ class DataLoader(object):
             
             img = np.zeros(imgSize)
 
-        #max_point_gray_value = pow(2,(x_shift + y_shift - 2))
+        
         
         max_point_gray_value = x_shift * y_shift
-        x_bin_size = max_point_gray_value/x_shift
-        y_bin_size = max_point_gray_value/y_shift
-        
+         
+        x_bin_size = int(max_point_gray_value/x_shift)
+        y_bin_size = int(max_point_gray_value/y_shift)
+         
 
         # z_value is to store the z axis value with specifican (x,y)
         # z_value = {(x,y):[z1,z2]}
@@ -318,28 +329,29 @@ class DataLoader(object):
 
             center_x = coors[0][index]
             center_y  = coors[1][index]
-            #print('center_x',center_x,'center_y',center_y)
 
-            for i in range(-1*int(x_shift-1),int(x_shift-1)+1):
-                for j in range(-1*int(y_shift-1),int(y_shift-1)+1):
-                    '''
-                    shift_value = abs(i) + abs(j)
-                    
-                    tmp_gray_value = max_point_gray_value/pow(2,shift_value)
-                    '''
-                    
+            for j in range(-1*int(y_shift-1),int(y_shift-1)+1):
+                for i in range(-1*int(x_shift-1),int(x_shift-1)+1):
+                                    
                     tmp_x_value  = max_point_gray_value - abs(i) * x_bin_size
-                    tmp_y_bin = tmp_x_value/y_shift
-                    tmp_gray_value = tmp_x_value - tmp_y_bin * abs(j)  
+                    tmp_y_bin = int(tmp_x_value/(y_shift))
+                              
+                    tmp_gray_value = tmp_x_value - tmp_y_bin * abs(j)
+                    before = img[center_x+i][center_y+j] 
+                     
                     img[center_x+i][center_y+j] += tmp_gray_value
-                    #print("i",i,'j',j,'tmp_gray_value',tmp_gray_value)  
+                    img[center_x+i][center_y+j] = min(255,img[center_x+i][center_y+j])
+                     
             if(len(coors)>2):
                 # record the z value of the center x and center y
                 x_y_pair = (center_x,center_y)
                 if(x_y_pair not in z_value ):
                     z_value[x_y_pair]  = []
                 z_value[x_y_pair].append(coors[2][index])
+        
+        
 
+         
         return img.astype(np.uint8), z_value
 
 
