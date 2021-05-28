@@ -146,7 +146,7 @@ class DataLoader(object):
         return bgrimg 
         pass
 
-    def visualize(self,coors,y_gap=False,x_gap=False,bbox=None,projection='xy'):
+    def visualize(self,coors,y_gap=False,x_gap=False,bbox=None,projection='xy',adjust_BC=True):
         '''
         for convinient, use plt heatmap to generate the image 
         
@@ -166,15 +166,24 @@ class DataLoader(object):
          
         original_img = img         
         if(y_gap):
-            img = img.T
-            img = np.flipud(img)    
-            cv2_img = self.genRGB(img,colorDirection='row')
+            #img = img.T
+            #img = np.flipud(img)
+            if(adjust_BC):
+                img = img.T
+                img = np.flipud(img)    
+                cv2_img = self.genRGB(img,colorDirection='row')
+            else:
+                cv2_img = img
             return cv2_img,None,original_img
             pass
         elif(x_gap):
                          
-            img = img.T 
-            cv2_img = self.genRGB(img,colorDirection='col') 
+            #img = img.T
+            if(adjust_BC):
+                img = img.T 
+                cv2_img = self.genRGB(img,colorDirection='col')
+            else:
+                cv2_img = img 
             return cv2_img,None,original_img
         else:
             img = img.T         
@@ -299,7 +308,7 @@ class DataLoader(object):
         elif(projection=='yz'):
             x_shift = self.axial_shifted
             y_shift = self.lateral_shifted 
-        #print('coors',coors) 
+        #print("projection",projection,'coors',coors) 
         if('numpy' not in str(type(img)) and img==None):
             # create a new image
             # get the size of the image for the visualization

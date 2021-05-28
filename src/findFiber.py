@@ -185,7 +185,8 @@ class DataManager(object):
                 f2 = csvData['Y_magnificated'] == _y
                 f3 = csvData['Z_normalized'] ==  _z
              
-                tmpData = csvData[f1&f2&f3] 
+                tmpData = csvData[f1&f2&f3]
+                 
                 index.append(tmpData.index[0])
                 z_slice_record.append(slice_index)
          
@@ -405,7 +406,7 @@ class FindFiber(object):
     Find fibers with the specific conditions
 
     '''
-    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray,z_gap_tolerance):
+    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray,z_gap_tolerance,max_z_removal_gray=None):
         # basic settings
        
         self.minX = minX
@@ -423,6 +424,7 @@ class FindFiber(object):
         self.nm_per_pixel = nm_per_pixel
         self.max_removel_gray = max_removel_gray
         self.z_gap_tolerance = z_gap_tolerance
+        self.max_z_removal_gray = max_z_removal_gray
 
     def identifyFiber(self):
 
@@ -709,27 +711,37 @@ class FindFiber(object):
             stat_info[new_key] = [add_info[key]]
         return stat_info
         pass
-    def fetchCoordinates(self,xyCoors,xyzCoors):
+    def fetchCoordinates(self,xyCoors,xyzCoors,coor_type='xy',real_z_list=[]):
         '''
          
 
         '''
-        #print("fetchCoordinates vstack before",xyCoors)
+        
         xyCoors= np.vstack((xyCoors[0], xyCoors[1])).T
-        #print('#'*10)
-        #print("fetchCoordinates vstack after",xyCoors)
+        
+        
         xyzCoors = np.vstack((xyzCoors[0],xyzCoors[1],xyzCoors[2])).T
         new_x = []
         new_y = []
         new_z = []
-        #print("xyCoors.shape",xyCoors.shape,'xyzCoors.shape',xyzCoors.shape)
+          
         for i in range(xyCoors.shape[0]):
             for k in range(xyzCoors.shape[0]):
-                if(xyCoors[i][0]==xyzCoors[k][0] and xyCoors[i][1]==xyzCoors[k][1]):
+                if(coor_type=='xy' and xyCoors[i][0]==xyzCoors[k][0] and xyCoors[i][1]==xyzCoors[k][1]):
                     new_x.append(xyCoors[i][0])
                     new_y.append(xyCoors[i][1]) 
                     new_z.append(xyzCoors[k][2])
-        
+                elif(coor_type=='yz' and xyCoors[i][0]==xyzCoors[k][1] and xyCoors[i][1]==xyzCoors[k][2]):
+                    new_x.append(xyzCoors[k][0])
+                    new_y.append(xyzCoors[k][1])
+                    #new_z.append(xyzCoors[k][2])
+                    new_z.append(real_z_list[k])
+                elif(coor_type=='xz' and xyCoors[i][0]==xyzCoors[k][0] and xyCoors[i][1]==xyzCoors[k][2]):
+                    new_x.append(xyzCoors[k][0])
+                    new_y.append(xyzCoors[k][1])
+                    #new_z.append(xyzCoors[k][2])
+                    new_z.append(real_z_list[k])
+         
         return [np.asarray(new_x),np.asarray(new_y),np.asarray(new_z)]   
         pass 
 
@@ -840,7 +852,7 @@ class FindFiber(object):
         new_z_slice_pts = self._rmZPts(new_z_slice_pts,direction=-1)
         # add shifted points to z_slice_pts,z_ranges
         # get cluter points
-
+        return new_z_slice_pts
         tmp_x = []
         tmp_y = []
         tmp_z = []
@@ -862,9 +874,82 @@ class FindFiber(object):
             cur_cluster = None
             
         return [cur_cluster]
-         
+    
 
-    def clipCluster(self,curClusterImg,curBBox,clusterPts,gray_threshold):
+    def checkAround(self,img,x,y):
+        '''
+        
+        '''
+        n_row = img.shape[0]
+        n_col = img.shape[1]
+        center_gray = img[x][y]
+        for i in range(-1,2):
+            for j in range(-1,2):
+                if(i==j and i==0):
+                    continue
+                if(img[i][j]>=center_gray):
+                    return False
+        return True
+
+       
+    def clipZCluster(self,z_slice_pts,projection='xz'):
+
+
+        '''
+        remove points with gray value <= threshold && it is the local maximum
+
+        '''
+        # format Z slice points
+        new_x = []
+        new_y = []
+        new_z = []
+        real_z = []
+        #print("clipZCluster: ",z_slice_pts)
+        for i in range(len(z_slice_pts)):
+            cur_slice_pts = z_slice_pts[i]
+            if(cur_slice_pts==None):
+                continue
+            new_x.extend(cur_slice_pts[0])
+            new_y.extend(cur_slice_pts[1])
+            # (x,y) belongs the ith z slice
+            tmp = [i]*len(cur_slice_pts[0])
+            new_z.extend(tmp)
+            real_z.extend(cur_slice_pts[2])
+            pass
+        
+        z_format_pts = [np.asarray(new_x),np.asarray(new_y),np.asarray(new_z)]
+
+        if(self.max_z_removal_gray==None):    
+            rm_z_threshold = 2*self.myDataLoader.lateral_shifted * self.myDataLoader.axial_shifted
+        else:
+            rm_z_threshold = self.max_z_removal_gray
+        if(projection=='xz'):
+            cur_bbox = {'x1':0,'x2':z_format_pts[0].max()+self.myDataLoader.lateral_shifted+2,'y1':0,'y2':z_format_pts[2].max()+self.myDataLoader.axial_shifted-1}
+       
+            xz_figure, _, cur_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=cur_bbox,projection='xz',adjust_BC=False)
+        
+            '''
+            for i in range(z_format_pts[0].min()-2,z_format_pts[0].max()+3):
+                 tmp_line = ''
+                 for j in range(xz_img.shape[1]):
+                    tmp_line  = tmp_line + str(xz_img[i][j]) + '\t'
+                 print(tmp_line.strip('\t'))
+            '''
+        elif(projection=='yz'):
+            cur_bbox = {'x1':0,'x2':z_format_pts[1].max()+self.myDataLoader.lateral_shifted+2,'y1':0,'y2':z_format_pts[2].max()+self.myDataLoader.axial_shifted-1}
+            yz_figure, _, cur_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=cur_bbox,projection='yz',adjust_BC=False)
+
+        all_clipped_pts = []
+        for k in range(1,rm_z_threshold+1):
+            #print("projection",projection,"clip z cluster gray", k)
+            cliped_pts = self.clipCluster(cur_img,cur_bbox,z_format_pts,k,projection,real_z)
+            #print("len(cliped_pts)",len(cliped_pts))
+            #print(cliped_pts)
+            all_clipped_pts.extend(cliped_pts)
+         
+        return all_clipped_pts
+
+    def clipCluster(self,curClusterImg,curBBox,clusterPts,gray_threshold,projection='xy',real_z_list=[]):
         '''
         This is a brute force way, we might try other algorthims in the future 
         1. set points that <= gray_threshould as 0 in the image mat
@@ -874,32 +959,41 @@ class FindFiber(object):
         # step 1, iterate cluster points and record which point has low gray threshold
         new_img  = np.array(curClusterImg, copy=True) 
         found_valid_flag = False
-        #print('new_img.shape',new_img.shape) 
+         
         rm_coors = np.argwhere((curClusterImg<=gray_threshold)&(curClusterImg>0))
        
-
+        #print("rm_coors",rm_coors)
         if(len(rm_coors)==0):
             return []
-        #print("rm_coors",rm_coors)    
+        #print("clusterPts",clusterPts) 
         for k in range(rm_coors.shape[0]):
             # remove the point
             x = rm_coors[k][0]
             y = rm_coors[k][1]
             #print('x',x,'y',y,'curClusterImg',curClusterImg[x][y])
             new_img[x][y] = 0
-
+ 
             if(not found_valid_flag):
                 # check if the current position at least has one center point
                 for i in range(len(clusterPts[0])):
-                    if(clusterPts[0][i]==x and clusterPts[1][i]==y):
+                    #print(clusterPts[0][i],clusterPts[1][i],clusterPts[2][i])
+                    if(projection=='xy' and clusterPts[0][i]==x and clusterPts[1][i]==y):
+                        found_valid_flag = True
+                        break
+                    elif(projection=='yz' and clusterPts[1][i]==x and clusterPts[2][i]==y):
+                        found_valid_flag = True
+                        break
+                    elif(projection=='xz' and clusterPts[0][i]==x and clusterPts[2][i]==y):
+
                         found_valid_flag = True
                         break
         
         num_labels, labels = cluster_by_connectedComponents(new_img,self.connectedFlag)
- 
-        #print("num_labels",num_labels,"found_valid_flag",found_valid_flag)
+        #print(num_labels,labels) 
         # if do not result in more than 1 connected component and not valid points were removed
+        #print("num_labels<=min_cliped_cluster",num_labels<=2,"not found_valid_flag",not found_valid_flag)
         if(num_labels<=2 and (not found_valid_flag)):
+            
             return [] 
         
         all_pts = []
@@ -909,11 +1003,11 @@ class FindFiber(object):
             if (len(pts[0])==0):
                 continue
             
-            new_cluster_pts = self.fetchCoordinates(pts,clusterPts)
+            new_cluster_pts = self.fetchCoordinates(pts,clusterPts,coor_type=projection,real_z_list=real_z_list)
             all_pts.append(new_cluster_pts)
         return all_pts                    
       
-        pass
+        
 
 
 
@@ -1021,22 +1115,27 @@ class FindFiber(object):
              
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
-            
+            # check connectivity 
+            check_num_labels, _ = cluster_by_connectedComponents(cur_img,self.connectedFlag,False) 
+            if(check_num_labels>2):
+                logging.info("current cluster is not connected")
+                continue
             # bbox 
             bbox = self._bbox(cur_img)
              
             # check the max gray value of the cluster 
             cur_max_gray,cur_sum_gray = self.myModel.calMaxGrayVal(cur_img,bbox)
-
+            '''
             # fingerprint of this molecular cluster            
-            tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' + str(cur_sum_gray)
-            if(tmp_coors in find_coordinates):
+            #tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' + str(len(cur_cluster[0]))
+            tmp_coors = str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2'])
+            
+            if(tmp_coors in find_coordinates and cur_sum_gray<find_coordinates[tmp_coors]):
+                
                 logging.info('current cluster has been identified before')
                 continue
-            find_coordinates[tmp_coors] = True 
-            logging.info("current region %s" %(tmp_coors))
-
-            #print("self.minGray",self.minGray,"cur_max_gray",cur_max_gray) 
+            '''
+             
             if(self.minGray and cur_max_gray < self.minGray):
                 continue
             
@@ -1046,10 +1145,21 @@ class FindFiber(object):
             logging.info("check continue Z complete")
             
             pseudo_z_length = len(z_slice_ranges) * self.zSlice
+            tmp_coors = str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' +str(pseudo_z_length)
+            if(tmp_coors in find_coordinates):
+                
+                logging.info('current cluster has been identified before')
+                continue
+
+            find_coordinates[tmp_coors] = cur_sum_gray
+
+
+
 
             # if the total Z length of this cluster is smaller than the Z threshold, 
             # there is no need to analyze this cluster  
             if(pseudo_z_length<self.minZ):
+                #print("pseudo_z_length",pseudo_z_length)
                 logging.info("z length is not satisfying")
                 continue
                       
@@ -1088,8 +1198,9 @@ class FindFiber(object):
                     angle_res = self.calAngle(imgMatData) 
                     stat_info = self._setInfoToStat(stat_info,angle_res,'angle')
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
+                    
                     logging.info("saveData complete")
-                    find_coordinates[tmp_coors] = True
+                    #find_coordinates[tmp_coors] = True
                      
                        
                 if((clipFlagX or clipFlagY)and (self.max_removel_gray!=None)):
@@ -1104,13 +1215,36 @@ class FindFiber(object):
                             all_pts = clipped_pts
                          
                     pass
+
+
+                zCliped_pts = self.rmOutlierZ(z_slice_pts)
+
+                if(zCliped_pts[0] !=None):
+                    #zCliped_pts.extend(all_pts)
+                    #all_pts = zCliped_pts
+                    clipping_z_pts = zCliped_pts
+                else:
+                    clipping_z_pts = z_slice_pts
+
+                xz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='xz')
+                if(len(xz_clipped_pts)!=0):
+                    xz_clipped_pts.extend(all_pts)
+                    all_pts = xz_clipped_pts
+ 
+                      
+                yz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='yz')
+                if(len(yz_clipped_pts)!=0):
+                    yz_clipped_pts.extend(all_pts)
+                    all_pts= yz_clipped_pts
+                
+                ''' 
                 # clip the cluster by z slice
                 zCliped_pts = self.rmOutlierZ(z_slice_pts)
                 
                 if(zCliped_pts[0] !=None):
                     zCliped_pts.extend(all_pts)
                     all_pts = zCliped_pts
- 
+                '''
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)

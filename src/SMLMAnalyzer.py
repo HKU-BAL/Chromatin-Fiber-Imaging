@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--MAX_NOISE_GRAY',type=int,default=8,help='max removal gray value, which is used in noise removal module')
     parser.add_argument('--Z_GAP_TOLERANCE',type=float,default=50,help='z gap tolerance threshold')
-
+    parser.add_argument('--MAX_Z_NOISE_GRAY',type=int,default=None,help='max removal gray value for xz and yz projections')
  
     args = parser.parse_args()
 
