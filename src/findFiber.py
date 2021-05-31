@@ -1189,9 +1189,8 @@ class FindFiber(object):
                     #bbox
                     stat_info['upper left'] = ['['+str(bbox['x1'])+','+str(bbox['y1'])+']']
                     stat_info['lower right'] = ['['+str(bbox['x2'])+','+str(bbox['y2'])+']']
-                    stat_info['sum of gray value'] = [sum(sum(cur_img))] 
-                    
-                    
+                    stat_info['sum of gray value'] = [cur_sum_gray] 
+                     
                     # generate visualizations
                     figureData,imgMatData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img)
                     logging.info("figure rendering complete") 
