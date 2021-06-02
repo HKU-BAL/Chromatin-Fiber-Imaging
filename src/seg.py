@@ -96,8 +96,8 @@ def cluster_by_connectedComponents(img_mat,my_connectivity,Morphological_Transfo
       
     if(Morphological_Transformations):
         img = Morphological_Transformations(img) 
-    
-    num_labels, labels_im = cv2.connectedComponents(img,connectivity=my_connectivity)
+     
+    num_labels, labels_im = cv2.connectedComponents(img.astype(np.uint8),connectivity=my_connectivity)
     #print("labels_im.max()",labels_im.max())
     return num_labels,labels_im
 

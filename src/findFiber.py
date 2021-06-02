@@ -42,6 +42,7 @@ class DataProcessor(object):
            dataCheckFlag = 1
 
        data_list = []
+       srcData["Frame Number"] = srcData["Frame Number"].astype(int)
        #print("prepare locPrecThreshold",locPrecThreshold)
        if(locPrecThreshold!=None):
           f1 = srcData["X Fitting Error"]<= locPrecThreshold
@@ -1115,16 +1116,17 @@ class FindFiber(object):
              
             # gen a new image by the current points,only the current cluster
             cur_img,cur_zDict = self.myDataLoader.genNewImg(cur_cluster,curImg,False)
+            bbox = self._bbox(cur_img)
+            #print(cur_img[bbox['x1']:bbox['x2']+1,bbox['y1']:bbox['y2']+1])
+
             # check connectivity 
             check_num_labels, _ = cluster_by_connectedComponents(cur_img,self.connectedFlag,False) 
             if(check_num_labels>2):
                 logging.info("current cluster is not connected")
-                continue
-            # bbox 
-            bbox = self._bbox(cur_img)
-             
+                continue 
             # check the max gray value of the cluster 
             cur_max_gray,cur_sum_gray = self.myModel.calMaxGrayVal(cur_img,bbox)
+            
             '''
             # fingerprint of this molecular cluster            
             #tmp_coors =  str(bbox['x1']) + '.' + str(bbox['y1']) + '.' + str(bbox['x2']) + '.' + str(bbox['y2']) + '.' + str(len(cur_cluster[0]))

@@ -35,6 +35,8 @@ class DataLoader(object):
         return matplotlib figure, axes
 
         '''
+        img = np.clip(img,0,255)
+        img = img.astype(np.uint8)
         figure, ax = plt.subplots()
         ax.imshow(img, interpolation='nearest',cmap=colors,origin="upper")
         ax.axis('off')
@@ -169,6 +171,8 @@ class DataLoader(object):
             #img = img.T
             #img = np.flipud(img)
             if(adjust_BC):
+                img = np.clip(img,0,255)
+                img = img.astype(np.uint8)
                 img = img.T
                 img = np.flipud(img)    
                 cv2_img = self.genRGB(img,colorDirection='row')
@@ -180,6 +184,8 @@ class DataLoader(object):
                          
             #img = img.T
             if(adjust_BC):
+                img = np.clip(img,0,255)
+                img = img.astype(np.uint8)
                 img = img.T 
                 cv2_img = self.genRGB(img,colorDirection='col')
             else:
@@ -349,7 +355,7 @@ class DataLoader(object):
                     before = img[center_x+i][center_y+j] 
                      
                     img[center_x+i][center_y+j] += tmp_gray_value
-                    img[center_x+i][center_y+j] = min(255,img[center_x+i][center_y+j])
+                    #img[center_x+i][center_y+j] = min(255,img[center_x+i][center_y+j])
                      
             if(len(coors)>2):
                 # record the z value of the center x and center y
@@ -360,9 +366,8 @@ class DataLoader(object):
         
         
 
-         
-        return img.astype(np.uint8), z_value
-
+        return img, z_value
+        
 
     def gassianRendering(self,srcData):
         '''
