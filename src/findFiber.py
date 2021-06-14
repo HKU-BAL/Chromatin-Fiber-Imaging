@@ -139,7 +139,9 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_median_FWHM','xz_median_FWHM_err','yz_median_FWHM','yz_median_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
+        
+        #cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         stat_info = stat_info[cols] 
         stat_info.to_csv(os.path.join(stat_path,str(self.save_index)+'_stat.csv'),index=False)
 
@@ -208,36 +210,10 @@ class DataManager(object):
         '''
         #index = []
         
-        ''' 
-        print('(len(pts[0])',len(pts[0]))
-        print('(len(pts[1])',len(pts[1])) 
-        print('(len(pts[2])',len(pts[2]))
-        '''
+        
 
         newData = self.extractCsvFromZSlicePts(pts,csvData)
 
-        '''
-        # extract CSV data
-        for i in range(len(pts[0])):
-             #print("extractData i",i)
-                     
-             _x = pts[0][i]
-             _y = pts[1][i]
-             _z = pts[2][i]
-             f1 = csvData['X_magnificated'] == _x
-             f2 = csvData['Y_magnificated'] == _y
-             f3 = csvData['Z_normalized'] ==  _z
-             #print('_x',_x,'_y',_y,'_z',_z)
-             
-            
-             tmpData = csvData[f1&f2&f3]
-             #print('tmpData',tmpData)
-             index.append(tmpData.index[0])
-
-         
-        newData = csvData.loc[index]
-        '''
-        #print('newData',newData)
         min_frame = min(newData["Frame Number"])
         max_frame = max(newData["Frame Number"])
         # life time of this found fiber
@@ -318,9 +294,10 @@ class Model(object):
         # data: dictionary, distance:gray value
         data = {}
         num_of_pixels = 0
+        #print("box",box,"nm_per_pixel",nm_per_pixel)
         # extract data point from the image
-        for i in range(box['x1'],min((box['x2']+1),img.shape[0])):
-            for j in range(box['y1'],min(box['y2']+1,img.shape[1])):
+        for i in range(box['x1'],box['x2']+1):
+            for j in range(box['y1'],box['y2']+1):
 
                 if(box_flag == 'y'):
 
@@ -331,13 +308,17 @@ class Model(object):
 
                 if(_tmp_dist not in data):
                     data[_tmp_dist] = 0
-              
-                data[_tmp_dist] += img[i][j]
-                 
+                #print("i",i,'j',j,"img.shape[0]",img.shape[0],"img.shape[1]",img.shape[1],"img[i][j]",img[i][j])
+                #print("i<img.shape[0]",i<img.shape[0],"")
+                if(i<img.shape[0] and j < img.shape[1] and i >=0 and j >=0): 
+                    data[_tmp_dist] += img[i][j]
+                    #print("data[_tmp_dist]",data[_tmp_dist])
+                else:
+                    continue
         
         # x value
         
-
+        #print(data)
         data_x = np.asarray(list(data.keys()))
         v = list(data.values())
        
@@ -348,10 +329,10 @@ class Model(object):
         elif(box_flag == 'x'):
             data_y = np.asarray(v) / float(box['x2']-box['x1']+1)
         
-       
         if(len(np.take(data_y,np.argwhere(data_y>0),0))<4):
             
-            return -1,'err'
+            #return -1,'err'
+            return -1,10000
  
         
         gmodel = lmModel(self.gaussAMP)
@@ -375,7 +356,8 @@ class Model(object):
         
         my_k_param = 'w'
         if (result.params[my_k_param].stderr == None):
-            err = 'err'
+            #err = 'err'
+            err = 100000000
         else:
            
             err = abs(result.params[my_k_param].stderr*2.354)
@@ -472,7 +454,7 @@ class FindFiber(object):
         y1 = max(0,bbox['y1'])
         # the bottom
         y2 = min(bbox['y2'],img_mat.shape[1])
-
+        #print("x1",x1,'y1',y1,'x2',x2,'y2',y2)
         all_boxes = []
         
         if(axis=='x'):
@@ -499,9 +481,13 @@ class FindFiber(object):
                         continue
                     #print('find box axis',axis,left,right,y1,y2,cover_flag_left,cover_flag_right) 
                     if(cover_flag_left and cover_flag_right):
-                        tmp_box = {'x1':left,'x2':right,'y1':y1-shift_val,'y2':y2+shift_val}
+                         
+                        tmp_box = {'x1':left,'x2':right,'y1':y1-shift_val,'y2':y2+shift_val}               
+                        #tmp_box = {'x1':left,'x2':right,'y1':max(0,y1-shift_val),'y2':min(img_mat.shape[1],y2+shift_val)}
+                        
                         all_boxes.append(tmp_box)
-            all_boxes.append({'x1':x1,'x2':x2,'y1':y1-shift_val,'y2':y2+shift_val})
+            all_boxes.append({'x1':x1,'x2':x2,'y1':y1-shift_val,'y2':y2+shift_val})       
+            #all_boxes.append({'x1':x1,'x2':x2,'y1':max(0,y1-shift_val),'y2':min(y2+shift_val,img_mat.shape[1])})
 
         elif(axis=='y'):
             max_line_width = bbox['y2'] - bbox['y1'] + 1
@@ -524,8 +510,10 @@ class FindFiber(object):
                         continue
                     if(cover_flag_up and cover_flag_down):
                         tmp_box = {'x1':x1-shift_val,'x2':x2+shift_val,'y1':left,'y2':right}
+                        #tmp_box = {'x1':max(0,x1-shift_val),'x2':min(img_mat.shape[0],x2+shift_val),'y1':left,'y2':right}
                         all_boxes.append(tmp_box)
             all_boxes.append({'x1':x1-shift_val,'x2':x2+shift_val,'y1':y1,'y2':y2})
+            #all_boxes.append({'x1':max(0,x1-shift_val),'x2':min(img_mat.shape[0],x2+shift_val),'y1':y1,'y2':y2})
         return all_boxes
         pass
     
@@ -638,7 +626,7 @@ class FindFiber(object):
         #print(degree_res)
         return degree_res 
         pass  
-    def calLength(self,bbox,img,axis):
+    def calLength(self,bbox,img,axis,nm,cur_error_threshold):
 
         '''
         calculate the X or Y length of the cluster by gaussian FWHM
@@ -653,8 +641,8 @@ class FindFiber(object):
       
         for i in range(len(allBoxes)-1):
            cur_box = allBoxes[i] 
-           cur_FWHM, cur_err = self.myModel.calFWHM(cur_box,img,axis,self.nm_per_pixel)
-           
+           cur_FWHM, cur_err = self.myModel.calFWHM(cur_box,img,axis,nm)
+            
            
               
            if(type(cur_err) == str and (cur_err == 'err' or cur_err=='nan')):
@@ -664,7 +652,7 @@ class FindFiber(object):
                
                continue
    
-           if(cur_err>self.ERROR_THRESHOLD):
+           if(cur_err>cur_error_threshold):
                
                continue
            all_FWHM.append(cur_FWHM)
@@ -682,12 +670,12 @@ class FindFiber(object):
             median_FWHM_err = np.median(all_FWHM_err)
         else:
            # there not exists any valid  box
-            mean_FWHM = -1
-            mean_FWHM_err = -1
-            median_FWHM = -1
-            median_FWHM_err = -1
+            mean_FWHM = ''
+            mean_FWHM_err = ''
+            median_FWHM = ''
+            median_FWHM_err = ''
         
-        whole_FWHM, whole_err  = self.myModel.calFWHM(allBoxes[-1],img,axis,self.nm_per_pixel)
+        whole_FWHM, whole_err  = self.myModel.calFWHM(allBoxes[-1],img,axis,nm)
         
         if(max_length==-1):
             max_length = whole_FWHM    
@@ -697,7 +685,9 @@ class FindFiber(object):
         elif(axis=='y' and max_length>self.minY):
             clipFlag = True
 
-         
+        if(whole_err>cur_error_threshold):
+            whole_FWHM = ''
+            whole_err = '' 
         cur_info = {'mean_FWHM':mean_FWHM,'mean_FWHM_err':mean_FWHM_err,\
                     'median_FWHM':median_FWHM,'median_FWHM_err':median_FWHM_err,\
                     'whole_FWHM':whole_FWHM,'whole_err':whole_err  }
@@ -784,7 +774,7 @@ class FindFiber(object):
             cur_gap = abs(next_slice_index - i) * self.zSlice
             # remove the slices with large z gap
             if(cur_gap >= self.z_gap_tolerance):
-                
+                            
                 if(direction==1):
                      clipped_z_slice_pts = z_slice_pts[next_slice_index:]
                      
@@ -853,7 +843,11 @@ class FindFiber(object):
         new_z_slice_pts = self._rmZPts(new_z_slice_pts,direction=-1)
         # add shifted points to z_slice_pts,z_ranges
         # get cluter points
-        return new_z_slice_pts
+        #if(len(new_z_slice_pts)==len(z_slice_pts)):
+        #     return None
+        clipped_flag = len(new_z_slice_pts)==len(z_slice_pts)
+        #print("len(new_z_slice_pts)",len(new_z_slice_pts),"len(z_slice_pts)",len(z_slice_pts))
+        return new_z_slice_pts,clipped_flag
         tmp_x = []
         tmp_y = []
         tmp_z = []
@@ -919,7 +913,7 @@ class FindFiber(object):
             pass
         
         z_format_pts = [np.asarray(new_x),np.asarray(new_y),np.asarray(new_z)]
-
+        
         if(self.max_z_removal_gray==None):    
             rm_z_threshold = 2*self.myDataLoader.lateral_shifted * self.myDataLoader.axial_shifted
         else:
@@ -1042,7 +1036,7 @@ class FindFiber(object):
        
         big_xy_img = wholeImg[bigger_x1:bigger_x2+1,bigger_y1:bigger_y2+1]
         big_xy_img_transpose = big_xy_img.T
-        #print("big_xy_img_transpose.shape",big_xy_img_transpose.shape)
+        
         big_xy_figure,_ = self.myDataLoader.genHeatMap(big_xy_img_transpose)
         figure_data['big_xy'] = big_xy_figure
         
@@ -1060,20 +1054,24 @@ class FindFiber(object):
             tmp = [i]*len(cur_slice_pts[0])
             new_z.extend(tmp)
             pass
+       
         z_format_pts = [np.asarray(new_x),np.asarray(new_y),np.asarray(new_z)]
-        
         # generate xz projection
         
-        #xz_bbox = {'x1':max(z_format_pts[0].min()-4,0),'x2':min(z_format_pts[0].max()+4,wholeImg.shape[0]),'y1':z_format_pts[2].min(),'y2':z_format_pts[2].max()}       
         xz_bbox = {'x1':max(z_format_pts[0].min()-self.myDataLoader.lateral_shifted-2,0),'x2':min(z_format_pts[0].max()+self.myDataLoader.lateral_shifted+2,wholeImg.shape[0]),'y1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted+1,0),'y2':min(z_format_pts[2].max()+self.myDataLoader.axial_shifted-1,wholeImg.shape[1])}        
-
+        #xz_bbox = {'x1':max(z_format_pts[0].min()-4,0),'x2':min(z_format_pts[0].max()+4,wholeImg.shape[0]),'y1':z_format_pts[2].min(),'y2':z_format_pts[2].max()}       
+        #xz_bbox = {'x1':max(z_format_pts[0].min()-self.myDataLoader.lateral_shifted-2,0),'x2':min(z_format_pts[0].max()+self.myDataLoader.lateral_shifted+2,wholeImg.shape[0]),'y1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted-5+1,0),'y2':z_format_pts[2].max()+self.myDataLoader.axial_shifted*2-1+5}        
         xz_figure, _, xz_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,bbox=xz_bbox,projection='xz')
+        #xz_figure, _, xz_img = self.myDataLoader.visualize([z_format_pts[0],z_format_pts[2]],y_gap=True,projection='xz')
         figure_data['xz'] = xz_figure   
         imgMat_data['xz'] = xz_img
  
         # generate yz projection
         yz_bbox = {'y1':max(z_format_pts[1].min()-4,0),'y2':min(z_format_pts[1].max()+4,wholeImg.shape[1]),'x1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted+1,0),'x2':min(z_format_pts[2].max()+self.myDataLoader.axial_shifted-1,wholeImg.shape[1])}
+
+        #yz_bbox = {'y1':max(z_format_pts[1].min()-4,0),'y2':min(z_format_pts[1].max()+4,wholeImg.shape[1]),'x1':max(z_format_pts[2].min()-self.myDataLoader.axial_shifted-5+1,0),'x2':z_format_pts[2].max()+self.myDataLoader.axial_shifted*2-1+5}
         yz_figure, _, yz_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,bbox=yz_bbox,projection='yz')
+        #yz_figure, _, yz_img = self.myDataLoader.visualize([z_format_pts[2],z_format_pts[1]],x_gap=True,projection='yz')
         figure_data['yz'] = yz_figure
         imgMat_data['yz'] = yz_img
  
@@ -1171,9 +1169,9 @@ class FindFiber(object):
                 
                           
                        
-                x_info,clipFlagX = self.calLength(bbox,cur_img,'x') 
+                x_info,clipFlagX = self.calLength(bbox,cur_img,'x',self.nm_per_pixel,self.ERROR_THRESHOLD) 
                
-                y_info,clipFlagY = self.calLength(bbox,cur_img,'y')
+                y_info,clipFlagY = self.calLength(bbox,cur_img,'y',self.nm_per_pixel,self.ERROR_THRESHOLD)
                 logging.info("X Y dimension calculation complete") 
                  
                 if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
@@ -1195,7 +1193,20 @@ class FindFiber(object):
                      
                     # generate visualizations
                     figureData,imgMatData = self.genProjections(cur_cluster,z_slice_pts,bbox,curImg,cur_img)
-                    logging.info("figure rendering complete") 
+                    logging.info("figure rendering complete")
+
+                    # FWHM for xz 
+                    xz_bbox = self._bbox(imgMatData['xz']) 
+                    #print("imgMatData['xz']",imgMatData['xz'],imgMatData['xz'].shape)  
+                    xz_info, _ = self.calLength(xz_bbox,imgMatData['xz'],'x',self.zSlice,1000) 
+                    stat_info = self._setInfoToStat(stat_info,xz_info,'xz')
+                     
+                    # FWHM for yz
+                    yz_bbox = self._bbox(imgMatData['yz'])
+                    #print("imgMatData['yz']",imgMatData['yz'],imgMatData['yz'].shape) 
+                    yz_info,_ =self.calLength(yz_bbox,imgMatData['yz'],'y',self.zSlice,1000)
+                    stat_info = self._setInfoToStat(stat_info,yz_info,'yz') 
+                     
                     angle_res = self.calAngle(imgMatData) 
                     stat_info = self._setInfoToStat(stat_info,angle_res,'angle')
                     self.myDataManager.saveData(stat_info,clusterData,figureData,splitFrameIndex)
@@ -1211,41 +1222,37 @@ class FindFiber(object):
                         clipped_pts = self.clipCluster(cur_img,bbox,cur_cluster,clip_threshold)
                         
                         if(len(clipped_pts)!=0):
-                             
+                            pass
                             clipped_pts.extend(all_pts)
                             all_pts = clipped_pts
                          
                     pass
 
-
-                zCliped_pts = self.rmOutlierZ(z_slice_pts)
-
-                if(zCliped_pts[0] !=None):
-                    #zCliped_pts.extend(all_pts)
-                    #all_pts = zCliped_pts
+                
+                zCliped_pts,zClipped_flag = self.rmOutlierZ(z_slice_pts)
+                
+                if(not zClipped_flag):
+                    zCliped_pts.extend(all_pts)
+                    all_pts = zCliped_pts
                     clipping_z_pts = zCliped_pts
                 else:
+                    
                     clipping_z_pts = z_slice_pts
 
                 xz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='xz')
                 if(len(xz_clipped_pts)!=0):
+                    
                     xz_clipped_pts.extend(all_pts)
                     all_pts = xz_clipped_pts
  
                       
                 yz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='yz')
                 if(len(yz_clipped_pts)!=0):
+                    
                     yz_clipped_pts.extend(all_pts)
                     all_pts= yz_clipped_pts
                 
-                ''' 
-                # clip the cluster by z slice
-                zCliped_pts = self.rmOutlierZ(z_slice_pts)
                 
-                if(zCliped_pts[0] !=None):
-                    zCliped_pts.extend(all_pts)
-                    all_pts = zCliped_pts
-                '''
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)

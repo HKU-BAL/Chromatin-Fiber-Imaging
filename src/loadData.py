@@ -37,6 +37,8 @@ class DataLoader(object):
         '''
         img = np.clip(img,0,255)
         img = img.astype(np.uint8)
+        figure = None
+        ax = None
         figure, ax = plt.subplots()
         ax.imshow(img, interpolation='nearest',cmap=colors,origin="upper")
         ax.axis('off')
@@ -120,27 +122,19 @@ class DataLoader(object):
         hsv = np.float32(hsv)
         bgrimg = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
         '''
-        # adjust the brightness and contrast  
-        '''
-        for i in range(img.shape[0]):
-            tmp_line = ''
-            for j in range(img.shape[1]):
-                tmp_line += str(img[i][j])+'\t'
-            tmp_line = tmp_line.strip()
-            print(tmp_line) 
-        '''      
+              
         for i in range(img.shape[0]):
             for j in range(img.shape[1]):
                 if(img[i][j]==0):
                     continue
                 before_gray = img[i][j]
-                #img[i][j] = min(int(img[i][j]/max_gray_value)*255)+30,255)
-                tmp_val = math.ceil((img[i][j]/max_gray_value)*254)
-                img[i][j] =min(254,10+int(tmp_val*2))
+                
+                tmp_val = math.ceil((img[i][j]/max_gray_value)*255)
+                img[i][j] =min(255,10+int(tmp_val*2))
                 
                 after_gray = img[i][j]
-                #logging.info("adjust:"+str(i)+' '+str(j)+' '+str(before_gray)+' '+str(after_gray)) 
-                #print("img[i][j]",img[i][j]) 
+                 
+                
         im_color =  cv2.applyColorMap(img, cv2.COLORMAP_HOT)
         
         
@@ -311,7 +305,9 @@ class DataLoader(object):
         elif(projection=='xz'):
             x_shift = self.lateral_shifted
             y_shift = self.axial_shifted
+            
         elif(projection=='yz'):
+            
             x_shift = self.axial_shifted
             y_shift = self.lateral_shifted 
         #print("projection",projection,'coors',coors) 
@@ -328,7 +324,7 @@ class DataLoader(object):
             img = np.zeros(imgSize)
 
         
-        
+        #print("img.shape",img.shape)    
         max_point_gray_value = x_shift * y_shift
          
         x_bin_size = int(max_point_gray_value/x_shift)
@@ -353,7 +349,7 @@ class DataLoader(object):
                               
                     tmp_gray_value = tmp_x_value - tmp_y_bin * abs(j)
                     before = img[center_x+i][center_y+j] 
-                     
+                                     
                     img[center_x+i][center_y+j] += tmp_gray_value
                     #img[center_x+i][center_y+j] = min(255,img[center_x+i][center_y+j])
                      

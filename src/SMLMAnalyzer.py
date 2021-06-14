@@ -71,7 +71,7 @@ if __name__ == '__main__':
         logging.info("incorrent input!")
         exit()
  
-    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY,z_gap_tolerance=args.Z_GAP_TOLERANCE)
+    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY,z_gap_tolerance=args.Z_GAP_TOLERANCE,max_z_removal_gray=args.MAX_Z_NOISE_GRAY)
     myFiberIdentifier.identifyFiber()
 
 
