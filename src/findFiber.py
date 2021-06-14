@@ -139,7 +139,7 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_median_FWHM','xz_median_FWHM_err','yz_median_FWHM','yz_median_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_median_FWHM','xz_median_FWHM_err','yz_median_FWHM','yz_median_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Pseudo Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         
         #cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         stat_info = stat_info[cols] 
@@ -1184,7 +1184,7 @@ class FindFiber(object):
                     logging.info("extract data complete")
                     stat_info = self._setInfoToStat(stat_info,x_info,'y')
                     stat_info = self._setInfoToStat(stat_info,y_info,'x')
-                    stat_info['Z size'] =[ pseudo_z_length]
+                    stat_info['Pseudo Z size'] =[ pseudo_z_length]
                     stat_info['Z range'] = ['[' + str(z_slice_ranges[0][0] ) + ',' + str(z_slice_ranges[-1][1]) + ']']
                     #bbox
                     stat_info['upper left'] = ['['+str(bbox['x1'])+','+str(bbox['y1'])+']']
