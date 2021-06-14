@@ -331,8 +331,8 @@ class Model(object):
         
         if(len(np.take(data_y,np.argwhere(data_y>0),0))<4):
             
-            #return -1,'err'
-            return -1,10000
+            
+            return -1,np.Inf
  
         
         gmodel = lmModel(self.gaussAMP)
@@ -357,7 +357,7 @@ class Model(object):
         my_k_param = 'w'
         if (result.params[my_k_param].stderr == None):
             #err = 'err'
-            err = 100000000
+            err = np.Inf
         else:
            
             err = abs(result.params[my_k_param].stderr*2.354)
