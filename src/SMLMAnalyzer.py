@@ -44,6 +44,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--Z_SLICE',type=float,default=10, help='set the length of slices on z-axis')
     parser.add_argument('--ERROR_THRESHOLD',type=float,default=6,help='fitting error threshold for gussian')
+    parser.add_argument('--Z_FWHM_ERROR_THRESHOLD',type=float,default=40,help='Guassian fitting error threshold')
    
     parser.add_argument('--MAX_GRAY_RM_THRESHOLD',type=int,default=8,help='(required) The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.')
     parser.add_argument('--FRAME_RANGE',type=int,default=None,help='frame range for each of the frame intervals')
@@ -71,7 +72,7 @@ if __name__ == '__main__':
         logging.info("incorrent input!")
         exit()
  
-    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY,z_gap_tolerance=args.Z_GAP_TOLERANCE,max_z_removal_gray=args.MAX_Z_NOISE_GRAY)
+    myFiberIdentifier = FindFiber(minX=args.X_MIN,maxX=args.X_MAX,minY=args.Y_MIN,maxY=args.Y_MAX,minZ=args.Z_MIN,zSlice=args.Z_SLICE,dataManager=myDataManager,dataLoader=myDataLoader,minGray=args.MAX_GRAY_RM_THRESHOLD,error_threshold=args.ERROR_THRESHOLD,nm_per_pixel=args.NM_PER_PIXEL,max_removel_gray=args.MAX_NOISE_GRAY,z_gap_tolerance=args.Z_GAP_TOLERANCE,max_z_removal_gray=args.MAX_Z_NOISE_GRAY,z_FWHM_error_threshold=args.Z_FWHM_ERROR_THRESHOLD)
     myFiberIdentifier.identifyFiber()
 
 

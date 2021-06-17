@@ -139,7 +139,7 @@ class DataManager(object):
         #print(stat_info.columns.tolist())
 
         # format the order of the stat file
-        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_median_FWHM','xz_median_FWHM_err','yz_median_FWHM','yz_median_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Pseudo Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
+        cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_median_FWHM','x_median_FWHM_err','y_median_FWHM','y_median_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Pseudo Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         
         #cols = ['x_mean_FWHM','x_mean_FWHM_err','y_mean_FWHM','y_mean_FWHM_err','x_whole_FWHM','x_whole_err','y_whole_FWHM','y_whole_err','xz_mean_FWHM','xz_mean_FWHM_err','yz_mean_FWHM','yz_mean_FWHM_err','xz_whole_FWHM','xz_whole_err','yz_whole_FWHM','yz_whole_err','X average localization precision','Y average localization precision','Z size','Z range','Life time','avg_photon_num','Max frame gap','Frame length','sum of gray value','upper left','lower right','angle_xz','angle_yz']
         stat_info = stat_info[cols] 
@@ -389,7 +389,7 @@ class FindFiber(object):
     Find fibers with the specific conditions
 
     '''
-    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray,z_gap_tolerance,max_z_removal_gray=None):
+    def __init__(self,minX,maxX,minY,maxY,minZ,zSlice,dataManager,dataLoader,minGray,error_threshold,nm_per_pixel,max_removel_gray,z_gap_tolerance,z_FWHM_error_threshold,max_z_removal_gray=None):
         # basic settings
        
         self.minX = minX
@@ -408,7 +408,7 @@ class FindFiber(object):
         self.max_removel_gray = max_removel_gray
         self.z_gap_tolerance = z_gap_tolerance
         self.max_z_removal_gray = max_z_removal_gray
-
+        self.z_FWHM_error_threshold = z_FWHM_error_threshold
     def identifyFiber(self):
 
         '''
@@ -845,15 +845,15 @@ class FindFiber(object):
         # get cluter points
         #if(len(new_z_slice_pts)==len(z_slice_pts)):
         #     return None
-        clipped_flag = len(new_z_slice_pts)==len(z_slice_pts)
+        clipped_flag = not(len(new_z_slice_pts)==len(z_slice_pts))
         #print("len(new_z_slice_pts)",len(new_z_slice_pts),"len(z_slice_pts)",len(z_slice_pts))
-        return new_z_slice_pts,clipped_flag
+        
         tmp_x = []
         tmp_y = []
         tmp_z = []
         #print("new_z_slice_pts: ",new_z_slice_pts)
          
-        if(len(new_z_slice_pts)!=len(z_slice_pts)):
+        if(clipped_flag):
             for tmp_z_slice in new_z_slice_pts:
                 
                 if(tmp_z_slice==None):
@@ -868,7 +868,7 @@ class FindFiber(object):
         else:
             cur_cluster = None
             
-        return [cur_cluster]
+        return new_z_slice_pts,[cur_cluster],clipped_flag
     
 
     def checkAround(self,img,x,y):
@@ -1100,7 +1100,7 @@ class FindFiber(object):
             # cur_cluster only record the center points    
             cur_cluster = all_pts[0]
             
-        
+            
             #print("cur_cluster",cur_cluster)
             count += 1
             if(len(all_pts)>1):
@@ -1229,30 +1229,35 @@ class FindFiber(object):
                     pass
 
                 
-                zCliped_pts,zClipped_flag = self.rmOutlierZ(z_slice_pts)
-                
-                if(not zClipped_flag):
-                    zCliped_pts.extend(all_pts)
-                    all_pts = zCliped_pts
+                zCliped_pts,zCliped_cluster_pts,zClipped_flag = self.rmOutlierZ(z_slice_pts)
+                #print("zCliped_pts",zCliped_pts)            
+                if(zClipped_flag):
+                    #print("z clipped!")
+                    #print("zCliped_cluster_pts",zCliped_cluster_pts)
+                    #print("zCliped_pts",zCliped_pts)
+                    zCliped_cluster_pts.extend(all_pts)
+                    all_pts = zCliped_cluster_pts
                     clipping_z_pts = zCliped_pts
                 else:
                     
                     clipping_z_pts = z_slice_pts
 
                 xz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='xz')
+                print("len(xz_clipped_pts)",len(xz_clipped_pts),xz_clipped_pts)
                 if(len(xz_clipped_pts)!=0):
-                    
+                    print("xz_clipped_pts!")
+                    #print(xz_clipped_pts) 
                     xz_clipped_pts.extend(all_pts)
                     all_pts = xz_clipped_pts
- 
+                print("len(all_pts)",len(all_pts)) 
                       
                 yz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='yz')
                 if(len(yz_clipped_pts)!=0):
-                    
+                    print("yz_clipped_pts!") 
                     yz_clipped_pts.extend(all_pts)
                     all_pts= yz_clipped_pts
                 
-                
+                print("yz len(all_pts)",len(all_pts)) 
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)
