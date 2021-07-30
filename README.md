@@ -12,8 +12,7 @@ The main aim of this tool is to automatically detect the molecular clusters with
 
 It is recommended to establish the running environment via conda enviromental by the enviroment.yml
 
-![image](https://drive.google.com/uc?export=view&id=1a1wYN44hSXHKOUAY77lPCk4tq-RM3JZK)
-
+![image](https://drive.google.com/uc?export=view&id=18oA3jAO_aVOS0IiNOxWy5kqQ9WVkYyaH)
 
 ## Usage
 ### Input data 
@@ -47,8 +46,10 @@ Here, we re-implemented the "average shifted histogram" for image rendering, whi
 |VIS_METHOD| (required) Image rendering method for reconstructing XY, YZ, XZ projection images. The default method is the average shifted histogram, which is proposed by ThunderSTORM.|
 | MAGNIFICATION | (optional) Magnification ratio for the positions of pixels. For example, the original coordinate of one single-molecule is \(x,y,z\), and the magnified coordinates id \(x\*r,y\*r,z\*r \) |
 | NM_PER_PIXEL | (required) The length of a pixel after doing magnification. |
-| LATERAL_SHIFT | (required) The lateral shift of the X, Y and Z-axis. |
+| LATERAL_SHIFT | (required) The lateral shift of the X, Y-axis. |
+| AXIAL_SHIFT | (required) The axial shift of Z-axis. |
 | FRAME_RANGE | (optional) Split the input CSV data into multiple frame intervals to avoid large frame gap within a molecular cluster | 
+| Z_SLICE | (required) The length of slices on Z-axis |
 
 #### Size estimation
 
@@ -61,7 +62,6 @@ The length of the Z-axis of a molecular cluster was estimated based on the numbe
 | Y_MIN | (required) Minimum Y for the target fiber |
 | Y_MAX | (required) Maximum Y for the target fiber |
 | Z_MIN | (required) Minimum Z length for the target fiber |
-| Z_SLICE | (required) The length of slices on Z-axis | 
 
 
 
@@ -71,9 +71,17 @@ This is an optional setting. It enables users to screen unnecessary data. For no
 | --- | --- |
 |MAX_GRAY_RM_THRESHOLD| (required) The pixels with the max gray value of the molecular clusters should bigger than this parameter. Otherwise, the cluster will not be analyzed.|
 | LOC_PREC_THRESHOLD | (optional) The localized single-molecules with X or Y fitting errors bigger than this parameter will be discarded. |
-| ERROR_THRESHOLD |(optional) Fitting error tolerence for FWHM calcuation. |
+| ERROR_THRESHOLD |(optional) Fitting error tolerence for FWHM calcuations of XY projection. |
+|Z_FWHM_ERROR_THRESHOLD |(optional) Fitting error tolerence for FWHM calcuations of XZ, YZ projections.|
 |Valid region (X1,X2,Y1,Y2,Z1,Z2) | (optional) Minimum and maximum coordinates of the valid region on X,Y,Z axis |
-| MAX_NOISE_GRAY | max removal gray value, which is used in noise removal module |
+
+### Noise removal settings
+| Paramter | Description |
+| --- | --- |
+| MAX_NOISE_GRAY | max removal gray value, which is used in noise removal module,applied to the XY projection. |
+| MAX_Z_NOISE_GRAY  | max removal gray value, which is applied to the YZ, XZ projections. |
+| Z_GAP_TOLERANCE | used for remove outlier Z slices, please refer to the paper for the algorithm.| 
+
 ### Example
 
 * Find fibers with X and Y range from 20nm to 45nm. And their minimum length of Z slices should larger than 100nm

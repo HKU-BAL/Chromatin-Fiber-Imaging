@@ -670,9 +670,9 @@ class FindFiber(object):
             median_FWHM_err = np.median(all_FWHM_err)
         else:
            # there not exists any valid  box
-            mean_FWHM = ''
+            mean_FWHM = -1
             mean_FWHM_err = ''
-            median_FWHM = ''
+            median_FWHM = -1
             median_FWHM_err = ''
         
         whole_FWHM, whole_err  = self.myModel.calFWHM(allBoxes[-1],img,axis,nm)
@@ -686,7 +686,7 @@ class FindFiber(object):
             clipFlag = True
 
         if(whole_err>cur_error_threshold):
-            whole_FWHM = ''
+            whole_FWHM = -1
             whole_err = '' 
         cur_info = {'mean_FWHM':mean_FWHM,'mean_FWHM_err':mean_FWHM_err,\
                     'median_FWHM':median_FWHM,'median_FWHM_err':median_FWHM_err,\
@@ -699,6 +699,8 @@ class FindFiber(object):
                 new_key = prefix + '_' + key
             else:
                 new_key = key
+            if(add_info[key]==-1):
+                add_info[key]=''
             stat_info[new_key] = [add_info[key]]
         return stat_info
         pass
@@ -1173,7 +1175,7 @@ class FindFiber(object):
                
                 y_info,clipFlagY = self.calLength(bbox,cur_img,'y',self.nm_per_pixel,self.ERROR_THRESHOLD)
                 logging.info("X Y dimension calculation complete") 
-                 
+                
                 if((x_info['whole_FWHM']>=self.minX or x_info['mean_FWHM']>=self.minX or x_info['median_FWHM'] >= self.minX) and (x_info['whole_FWHM']<=self.maxX or x_info['mean_FWHM']<=self.maxX or x_info['median_FWHM'] <= self.maxX) and (y_info['whole_FWHM']>=self.minY or y_info['mean_FWHM']>=self.minY or y_info['median_FWHM'] >= self.minY) and (y_info['whole_FWHM']<=self.maxY or y_info['mean_FWHM']<=self.maxY or y_info['median_FWHM'] <= self.maxY)):
                     
                     
@@ -1198,13 +1200,13 @@ class FindFiber(object):
                     # FWHM for xz 
                     xz_bbox = self._bbox(imgMatData['xz']) 
                     #print("imgMatData['xz']",imgMatData['xz'],imgMatData['xz'].shape)  
-                    xz_info, _ = self.calLength(xz_bbox,imgMatData['xz'],'x',self.zSlice,1000) 
+                    xz_info, _ = self.calLength(xz_bbox,imgMatData['xz'],'x',self.zSlice,self.z_FWHM_error_threshold) 
                     stat_info = self._setInfoToStat(stat_info,xz_info,'xz')
                      
                     # FWHM for yz
                     yz_bbox = self._bbox(imgMatData['yz'])
                     #print("imgMatData['yz']",imgMatData['yz'],imgMatData['yz'].shape) 
-                    yz_info,_ =self.calLength(yz_bbox,imgMatData['yz'],'y',self.zSlice,1000)
+                    yz_info,_ =self.calLength(yz_bbox,imgMatData['yz'],'y',self.zSlice,self.z_FWHM_error_threshold)
                     stat_info = self._setInfoToStat(stat_info,yz_info,'yz') 
                      
                     angle_res = self.calAngle(imgMatData) 
@@ -1243,21 +1245,20 @@ class FindFiber(object):
                     clipping_z_pts = z_slice_pts
 
                 xz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='xz')
-                print("len(xz_clipped_pts)",len(xz_clipped_pts),xz_clipped_pts)
+                
                 if(len(xz_clipped_pts)!=0):
-                    print("xz_clipped_pts!")
-                    #print(xz_clipped_pts) 
+                     
                     xz_clipped_pts.extend(all_pts)
                     all_pts = xz_clipped_pts
-                print("len(all_pts)",len(all_pts)) 
+               
                       
                 yz_clipped_pts = self.clipZCluster(clipping_z_pts,projection='yz')
                 if(len(yz_clipped_pts)!=0):
-                    print("yz_clipped_pts!") 
+                     
                     yz_clipped_pts.extend(all_pts)
                     all_pts= yz_clipped_pts
                 
-                print("yz len(all_pts)",len(all_pts)) 
+               
             else:
                 logging.info("Current cluster is not continue in Z-axis") 
                 sorted_continue_z_slice_pts = self.findContinueZ(z_slice_pts,z_slice_ranges)
